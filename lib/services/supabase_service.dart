@@ -1,37 +1,33 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/property_model.dart';
 
 class SupabaseService {
-  final _client = Supabase.instance.client;
+  final _supabase = Supabase.instance.client;
 
-  // সব প্রপার্টি এবং তাদের সেলারের তথ্য একসাথে আনা
-  Future<List<Property>> fetchProperties() async {
-    try {
-      final List<dynamic> response = await _client
-          .from('properties')
-          .select('*, sellers(name)') // Join query with sellers table
-          .order('created_at', ascending: false);
-      
-      return response.map((item) => Property.fromJson(item)).toList();
-    } catch (e) {
-      print('Supabase Fetch Error: $e');
-      throw Exception('Failed to load properties');
-    }
+  // বর্তমান ইউজার সেশন চেক করা
+  User? get currentUser => _supabase.auth.currentUser;
+
+  // রেজিস্ট্রেশন (Sign Up)
+  Future<AuthResponse> signUp(String email, String password) async {
+    return await _supabase.auth.signUp(email: email, password: password);
   }
 
-  // টাইপ অনুযায়ী ফিল্টার (যেমন: শুধু 'Land' অথবা 'Flat')
-  Future<List<Property>> fetchPropertiesByType(String type) async {
-    try {
-      final List<dynamic> response = await _client
-          .from('properties')
-          .select('*, sellers(name)')
-          .eq('property_type', type)
-          .order('created_at', ascending: false);
-      
-      return response.map((item) => Property.fromJson(item)).toList();
-    } catch (e) {
-      print('Filter Fetch Error: $e');
-      return [];
-    }
+  // লগইন (Sign In)
+  Future<AuthResponse> signIn(String email, String password) async {
+    return await _supabase.auth.signInWithPassword(email: email, password: password);
+  }
+
+  // লগআউট (Sign Out)
+  Future<void> signOut() async {
+    await _supabase.auth.signOut();
+  }
+
+  // ইউজারের রোল (Admin/Seller/Buyer) ডাটাবেস থেকে নিয়ে আসা
+  Future<String> getUserRole(String userId) async {
+    final response = await _supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+    return response['role'] ?? 'buyer';
   }
 }

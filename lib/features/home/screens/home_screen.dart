@@ -14,6 +14,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   late Future<List<Property>> _propertiesFuture;
   String selectedCategory = 'House'; // ডিফল্ট ক্যাটাগরি
+  int _selectedIndex = 0; // নেভিগেশন বারের জন্য বর্তমান ইনডেক্স
 
   @override
   void initState() {
@@ -31,7 +32,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      // extendBody: true দিলে নেভিগেশন বারটি বডির ওপর ভেসে থাকে এবং কন্টেন্ট নিচে দেখা যায়
+      extendBody: true, 
       body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -56,10 +60,13 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildSectionHeader("Nearby Property"),
               const SizedBox(height: 15),
               _buildNearbyList(),
+              // নেভিগেশন বারের জন্য নিচে পর্যাপ্ত স্পেস রাখা হয়েছে যাতে কোনো কোড ঢাকা না পড়ে
+              const SizedBox(height: 120), 
             ],
           ),
         ),
       ),
+      bottomNavigationBar: _buildFloatingNavBar(),
     );
   }
 
@@ -202,8 +209,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: FutureBuilder<List<Property>>(
         future: _propertiesFuture,
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           return ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: snapshot.data!.length,
@@ -337,6 +345,69 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const Icon(Icons.favorite_border, color: Colors.grey),
         ],
+      ),
+    );
+  }
+
+  // --- কাস্টম ফ্লোটিং নেভিগেশন বার ---
+  Widget _buildFloatingNavBar() {
+    return Container(
+      height: 70,
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 25), // চারপাশে মার্জিন দিয়ে ভাসমান লুক দেওয়া হয়েছে
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _navItem(Icons.home_filled, "Home", 0),
+          _navItem(Icons.domain_rounded, "Properties", 1),
+          _navItem(Icons.chat_bubble_outline_rounded, "Message", 2),
+          _navItem(Icons.person_outline_rounded, "Profile", 3),
+        ],
+      ),
+    );
+  }
+
+  Widget _navItem(IconData icon, String label, int index) {
+    bool isSel = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSel ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSel ? AppColors.primary : Colors.grey,
+              size: 26,
+            ),
+            if (isSel) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
