@@ -1,10 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../services/supabase_service.dart';
-// আপনার তৈরি করা ৩টি প্রোফাইল স্ক্রিন এখানে ইমপোর্ট করবেন
-// import 'buyer_profile_screen.dart';
-// import 'seller_profile_screen.dart';
-// import 'admin_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,104 +10,279 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   final SupabaseService _authService = SupabaseService();
+  late AnimationController _animationController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCirc,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+    ));
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _refreshState() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = _authService.currentUser;
 
-    // ইউজার লগইন না থাকলে প্রফেশনাল প্রম্পট দেখাবে
-    if (user == null) {
-      return _buildLoginPrompt();
-    }
+    if (user == null) return _buildLoginPrompt();
 
-    // ইউজার লগইন থাকলে তার রোল অনুযায়ী স্ক্রিন দেখাবে
-    return FutureBuilder<String>(
-      future: _authService.getUserRole(user.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-
-        final role = snapshot.data ?? 'buyer';
-
-        if (role == 'admin') {
-          return const Center(child: Text("Admin Profile Screen")); // AdminProfileScreen()
-        } else if (role == 'seller') {
-          return const Center(child: Text("Seller Profile Screen")); // SellerProfileScreen()
-        } else {
-          return const Center(child: Text("Buyer Profile Screen")); // BuyerProfileScreen()
-        }
-      },
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("My Profile", style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.primary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await _authService.signOut(); 
+              _refreshState();
+            },
+          )
+        ],
+      ),
+      body: FutureBuilder<String>(
+        future: _authService.getUserRole(user.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final role = snapshot.data ?? 'buyer';
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircleAvatar(
+                  radius: 50,
+                  backgroundColor: AppColors.primary,
+                  child: Icon(Icons.person, size: 60, color: Colors.white),
+                ),
+                const SizedBox(height: 20),
+                Text(user.email ?? "No Email", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 5),
+                Chip(
+                  label: Text(role.toUpperCase(), style: const TextStyle(color: Colors.white)),
+                  backgroundColor: AppColors.primary,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
-  // --- প্রফেশনাল লগইন প্রম্পট UI ---
   Widget _buildLoginPrompt() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(30),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Scaffold(
+      body: Stack(
         children: [
-          // একটি সুন্দর আইকন বা ইলাস্ট্রেশন (আপনার ইমেজের কালার প্যাটার্ন অনুযায়ী)
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.person_pin, size: 80, color: AppColors.primary),
-          ),
-          const SizedBox(height: 30),
-          const Text(
-            "Welcome to EstateX",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            "Login or Create an account to manage your properties and messages.",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey, fontSize: 16),
-          ),
-          const SizedBox(height: 40),
-          
-          // লগইন বাটন
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              onPressed: () {
-                // আপনার Login Screen এ নিয়ে যাবে
-                Navigator.pushNamed(context, '/login'); 
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          _buildBackground(),
+          Positioned.fill(child: Container(color: Colors.black.withOpacity(0.3))),
+          Center(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: _buildGlassCard(),
+                ),
               ),
-              child: const Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ),
-          const SizedBox(height: 15),
-          
-          // রেজিস্ট্রেশন বাটন (Outlined)
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: OutlinedButton(
-              onPressed: () {
-                // আপনার Register Screen এ নিয়ে যাবে
-                Navigator.pushNamed(context, '/register');
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              ),
-              child: const Text("Create Account", style: TextStyle(color: AppColors.primary, fontSize: 16)),
-            ),
-          ),
+          if (_isLoading) 
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBackground() {
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: NetworkImage('https://i.ibb.co.com/mrqpG5fg/image.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassCard() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.all(30),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTopIcon(),
+              const SizedBox(height: 20),
+              const Text(
+                "Welcome Back!", 
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Join EstateX to explore properties and manage your dream home.", 
+                textAlign: TextAlign.center, 
+                style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)
+              ),
+              const SizedBox(height: 30),
+              
+              _buildStyledButton(
+                text: "Sign In", 
+                isPrimary: true, 
+                onPressed: () {
+                  Navigator.pushNamed(context, '/login').then((_) => _refreshState());
+                }
+              ),
+              const SizedBox(height: 12),
+              _buildStyledButton(
+                text: "Create Account", 
+                isPrimary: false, 
+                onPressed: () {
+                  Navigator.pushNamed(context, '/register').then((_) => _refreshState());
+                }
+              ),
+              
+              const SizedBox(height: 25),
+              _buildDivider(),
+              const SizedBox(height: 20),
+              _buildGoogleButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    return InkWell(
+      onTap: () async {
+        setState(() => _isLoading = true);
+        try {
+          await _authService.signInWithGoogle();
+          _refreshState();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Google Sign-In failed: $e")));
+          }
+        } finally {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      },
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        height: 55,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.network(
+              'https://cdn1.iconfinder.com/data/icons/google-s-logo/150/Google_Icons-09-512.png',
+              height: 30,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata_rounded, color: Colors.white, size: 35),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              "Continue with Google",
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: Colors.white.withOpacity(0.3))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text("OR", style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+        ),
+        Expanded(child: Divider(color: Colors.white.withOpacity(0.3))),
+      ],
+    );
+  }
+
+  Widget _buildTopIcon() {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+      child: const Icon(Icons.person_outline_rounded, size: 50, color: Colors.white),
+    );
+  }
+
+  Widget _buildStyledButton({required String text, required bool isPrimary, required VoidCallback onPressed}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton(
+        onPressed: onPressed, // এখানে লজিকটি সরাসরি বসানো হয়েছে
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isPrimary ? Colors.white : Colors.transparent,
+          elevation: 0,
+          side: isPrimary ? BorderSide.none : const BorderSide(color: Colors.white, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        child: Text(
+          text, 
+          style: TextStyle(
+            color: isPrimary ? AppColors.primary : Colors.white, 
+            fontSize: 16, 
+            fontWeight: FontWeight.bold
+          )
+        ),
       ),
     );
   }

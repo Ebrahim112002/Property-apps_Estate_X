@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../models/property_model.dart';
 import '../../../services/supabase_service.dart';
+import '../../profile/screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,8 +14,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   late Future<List<Property>> _propertiesFuture;
-  String selectedCategory = 'House'; // ডিফল্ট ক্যাটাগরি
-  int _selectedIndex = 0; // নেভিগেশন বারের জন্য বর্তমান ইনডেক্স
+  String selectedCategory = 'House';
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -32,41 +33,40 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      // extendBody: true দিলে নেভিগেশন বারটি বডির ওপর ভেসে থাকে এবং কন্টেন্ট নিচে দেখা যায়
-      extendBody: true, 
-      body: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              // ১. লোকেশন ও প্রোফাইল সেকশন
-              _buildHeader(),
-              const SizedBox(height: 25),
-              // ২. সার্চ বার
-              _buildSearchBar(),
-              const SizedBox(height: 25),
-              // ৩. ক্যাটাগরি লিস্ট
-              _buildCategoryList(),
-              const SizedBox(height: 25),
-              // ৪. Recommended সেকশন (Horizontal)
-              _buildSectionHeader("Recommended Property"),
-              const SizedBox(height: 15),
-              _buildRecommendedList(),
-              const SizedBox(height: 25),
-              // ৫. Nearby সেকশন (Vertical)
-              _buildSectionHeader("Nearby Property"),
-              const SizedBox(height: 15),
-              _buildNearbyList(),
-              // নেভিগেশন বারের জন্য নিচে পর্যাপ্ত স্পেস রাখা হয়েছে যাতে কোনো কোড ঢাকা না পড়ে
-              const SizedBox(height: 120), 
-            ],
-          ),
+      extendBody: true,
+      // *** এই লাইনটি প্রোফাইল বাটন কাজ করানোর জন্য মেইন ***
+      body: _selectedIndex == 3 ? const ProfileScreen() : _buildHomeContent(),
+      bottomNavigationBar: _buildFloatingNavBar(),
+    );
+  }
+
+  // হোম কন্টেন্ট আলাদা মেথডে রাখা হয়েছে কোড পরিষ্কার রাখতে
+  Widget _buildHomeContent() {
+    return SafeArea(
+      bottom: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            _buildHeader(),
+            const SizedBox(height: 25),
+            _buildSearchBar(),
+            const SizedBox(height: 25),
+            _buildCategoryList(),
+            const SizedBox(height: 25),
+            _buildSectionHeader("Recommended Property"),
+            const SizedBox(height: 15),
+            _buildRecommendedList(),
+            const SizedBox(height: 25),
+            _buildSectionHeader("Nearby Property"),
+            const SizedBox(height: 15),
+            _buildNearbyList(),
+            const SizedBox(height: 120),
+          ],
         ),
       ),
-      bottomNavigationBar: _buildFloatingNavBar(),
     );
   }
 
@@ -353,16 +353,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFloatingNavBar() {
     return Container(
       height: 70,
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 25), // চারপাশে মার্জিন দিয়ে ভাসমান লুক দেওয়া হয়েছে
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 25),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20),
         ],
       ),
       child: Row(
@@ -371,7 +367,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _navItem(Icons.home_filled, "Home", 0),
           _navItem(Icons.domain_rounded, "Properties", 1),
           _navItem(Icons.chat_bubble_outline_rounded, "Message", 2),
-          _navItem(Icons.person_outline_rounded, "Profile", 3),
+          _navItem(
+            Icons.person_outline_rounded,
+            "Profile",
+            3,
+          ), // Profile Index 3
         ],
       ),
     );
@@ -385,7 +385,9 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSel ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          color: isSel
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -402,7 +404,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
                 ),
               ),
             ],
