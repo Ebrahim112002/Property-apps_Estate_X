@@ -6,6 +6,12 @@ class Property {
   final String imageUrl;
   final String propertyType;
   final String? sellerName;
+  final int bedrooms;
+  final int bathrooms;
+  final double area;
+  final bool isVerified;
+  final DateTime createdAt;
+  final String listingType;  // ✅ নতুন ফিল্ড: 'Rent' বা 'Sale'
 
   Property({
     required this.id,
@@ -15,35 +21,61 @@ class Property {
     required this.imageUrl,
     required this.propertyType,
     this.sellerName,
+    this.bedrooms = 2,
+    this.bathrooms = 2,
+    this.area = 1200,
+    this.isVerified = false,
+    required this.createdAt,
+    this.listingType = 'Rent',  // ✅ ডিফল্ট মান
   });
 
   factory Property.fromJson(Map<String, dynamic> json) {
     return Property(
-      // ১. ID অনেক সময় int বা String আসতে পারে, তাই .toString() করা নিরাপদ
       id: json['id']?.toString() ?? '',
-      
       title: json['title'] ?? 'No Title',
       location: json['location'] ?? 'No Location',
-      
-      // ২. Price হ্যান্ডলিং: num কে double এ কনভার্ট করার আগে নাল চেক
       price: (json['price'] ?? 0).toDouble(),
-      
       imageUrl: json['image_url'] ?? '',
-      propertyType: json['property_type'] ?? 'General',
-
-      // ৩. Join Query-র ডাটা ধরার প্রফেশনাল নিয়ম
-      // Supabase এ সাধারণত সেলারের তথ্য 'profiles' বা 'users' টেবিল থেকে আসে
-      // আপনার টেবিল রিলেশন অনুযায়ী 'sellers' কি-টি চেক করা হয়েছে
+      propertyType: json['property_type'] ?? json['type'] ?? 'General',
       sellerName: _parseSellerName(json),
+      bedrooms: json['bedrooms'] ?? json['bedroom'] ?? 2,
+      bathrooms: json['bathrooms'] ?? json['bathroom'] ?? 2,
+      area: (json['area'] ?? json['size'] ?? 1200).toDouble(),
+      isVerified: json['is_verified'] ?? json['verified'] ?? false,
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now(),
+      listingType: json['listing_type'] ?? json['listingType'] ?? 'Rent',  // ✅ Supabase থেকে আসবে
     );
   }
 
-  // সেলারের নাম পার্স করার জন্য একটি আলাদা হেল্পার মেথড (কোড ক্লিন রাখার জন্য)
   static String? _parseSellerName(Map<String, dynamic> json) {
-    if (json['sellers'] != null) {
-      // যদি 'sellers' টেবিল থেকে name আসে
-      return json['sellers']['full_name'] ?? json['sellers']['name'] ?? 'Unknown Seller';
+    if (json['profiles'] != null && json['profiles']['full_name'] != null) {
+      return json['profiles']['full_name'];
+    }
+    if (json['sellers'] != null && json['sellers']['full_name'] != null) {
+      return json['sellers']['full_name'];
+    }
+    if (json['seller_name'] != null) {
+      return json['seller_name'];
     }
     return 'Owner';
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'location': location,
+      'price': price,
+      'image_url': imageUrl,
+      'property_type': propertyType,
+      'bedrooms': bedrooms,
+      'bathrooms': bathrooms,
+      'area': area,
+      'is_verified': isVerified,
+      'created_at': createdAt.toIso8601String(),
+      'listing_type': listingType,  // ✅ যোগ করুন
+    };
   }
 }

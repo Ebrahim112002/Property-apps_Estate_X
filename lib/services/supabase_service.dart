@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../models/property_model.dart';
 
 class SupabaseService {
@@ -33,8 +34,8 @@ class SupabaseService {
     );
   }
 
-  Future<bool> signInWithGoogle() async {
-    return await _supabase.auth.signInWithOAuth(
+  Future<void> signInWithGoogle() async {
+    await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: 'io.supabase.estatex://login-callback/',
     );
@@ -170,9 +171,7 @@ class SupabaseService {
   }
 
   // ─────────────────────────────────────────
-  // AVATAR UPLOAD
-  // Flat path: userId.ext (upsert=true → auto-replace)
-  // Bucket RLS এ authenticated INSERT policy থাকতে হবে
+  // AVATAR UPLOAD - CORRECTED VERSION
   // ─────────────────────────────────────────
 
   Future<String?> uploadAvatar(
@@ -182,45 +181,98 @@ class SupabaseService {
   ) async {
     try {
       final ext = _cleanExt(fileName);
-      final mimeType = _getMimeType(ext);
-
-      // Flat path — folder নেই, শুধু userId.ext
-      // upsert: true → same path এ upload করলে replace হবে
-      final storagePath = '$userId.$ext';
-
-      debugPrint(
-          '📤 Uploading: $storagePath | $mimeType | ${bytes.lengthInBytes}B');
-
-      await _supabase.storage.from('avatars').uploadBinary(
-            storagePath,
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final storagePath = '${userId}_$timestamp.$ext';
+      
+      // Get current session for access token
+      final session = _supabase.auth.currentSession;
+      if (session == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final accessToken = session.accessToken;
+      final supabaseUrl = 'https://hxkokgzbeqmfdkzzeuex.supabase.co';
+      
+      debugPrint('📤 Uploading: $storagePath');
+      debugPrint('📤 Bytes size: ${bytes.lengthInBytes}B');
+      
+      // Method 1: Try direct HTTP upload (more reliable)
+      try {
+        final uploadUrl = '$supabaseUrl/storage/v1/object/avatars/$storagePath';
+        final uri = Uri.parse(uploadUrl);
+        
+        final request = http.MultipartRequest('POST', uri);
+        request.headers['Authorization'] = 'Bearer $accessToken';
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
             bytes,
-            fileOptions: FileOptions(
-              contentType: mimeType,
-              upsert: true,
-            ),
-          );
-
-      final ts = DateTime.now().millisecondsSinceEpoch;
-      final publicUrl =
-          _supabase.storage.from('avatars').getPublicUrl(storagePath);
-      final finalUrl = '$publicUrl?v=$ts';
-
-      debugPrint('✅ Upload success → $finalUrl');
-
-      await updateProfile(userId, {'avatar_url': finalUrl});
-
-      return finalUrl;
-    } on StorageException catch (e) {
-      debugPrint('❌ StorageException [${e.statusCode}]: ${e.message}');
-      // এই error মানে RLS policy নেই
-      // Supabase SQL Editor এ নিচের query run করো:
-      // CREATE POLICY "avatar_upload" ON storage.objects
-      // FOR INSERT TO authenticated
-      // WITH CHECK (bucket_id = 'avatars');
-      throw Exception('Storage error (${e.statusCode}): ${e.message}');
+            filename: storagePath,
+            contentType: http.MediaType('image', ext),
+          ),
+        );
+        
+        final streamedResponse = await request.send();
+        final responseBody = await streamedResponse.stream.bytesToString();
+        
+        if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
+          // Success - get public URL
+          final publicUrl = '$supabaseUrl/storage/v1/object/public/avatars/$storagePath';
+          
+          // Update profile with avatar URL
+          await updateProfile(userId, {'avatar_url': publicUrl});
+          
+          debugPrint('✅ Upload success (HTTP): $publicUrl');
+          return publicUrl;
+        } else {
+          debugPrint('⚠️ HTTP upload failed: ${streamedResponse.statusCode}');
+          debugPrint('Response: $responseBody');
+          
+          // Fall back to SDK method
+          return await _uploadWithSDK(storagePath, bytes, ext, userId);
+        }
+      } catch (httpError) {
+        debugPrint('⚠️ HTTP upload error: $httpError');
+        debugPrint('Falling back to SDK method...');
+        
+        // Fall back to SDK method
+        return await _uploadWithSDK(storagePath, bytes, ext, userId);
+      }
     } catch (e) {
       debugPrint('❌ Upload error: $e');
       rethrow;
+    }
+  }
+  
+  // Fallback upload method using Supabase SDK
+  Future<String?> _uploadWithSDK(
+    String storagePath,
+    Uint8List bytes,
+    String ext,
+    String userId,
+  ) async {
+    try {
+      final mimeType = _getMimeType(ext);
+      
+      await _supabase.storage.from('avatars').uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: mimeType,
+          upsert: true,
+        ),
+      );
+      
+      final supabaseUrl = 'https://hxkokgzbeqmfdkzzeuex.supabase.co';
+      final publicUrl = '$supabaseUrl/storage/v1/object/public/avatars/$storagePath';
+      
+      await updateProfile(userId, {'avatar_url': publicUrl});
+      
+      debugPrint('✅ Upload success (SDK): $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('❌ SDK upload failed: $e');
+      throw Exception('All upload methods failed: $e');
     }
   }
 
@@ -245,6 +297,37 @@ class SupabaseService {
         return 'image/gif';
       default:
         return 'image/jpeg';
+    }
+  }
+  
+  // ─────────────────────────────────────────
+  // HELPER: Test bucket connection
+  // ─────────────────────────────────────────
+  
+  Future<bool> testStorageConnection() async {
+    try {
+      final session = _supabase.auth.currentSession;
+      if (session == null) {
+        debugPrint('❌ No user logged in');
+        return false;
+      }
+      
+      final supabaseUrl = 'https://hxkokgzbeqmfdkzzeuex.supabase.co';
+      final testUrl = Uri.parse('$supabaseUrl/storage/v1/object/public/avatars/');
+      
+      final response = await http.get(testUrl);
+      debugPrint('Storage test status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        debugPrint('✅ Storage bucket is accessible');
+        return true;
+      } else {
+        debugPrint('❌ Storage bucket not accessible: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Storage test error: $e');
+      return false;
     }
   }
 }
