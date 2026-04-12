@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../services/supabase_service.dart';
@@ -34,7 +34,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   double _rating = 0.0;
 
   String? _avatarUrl;
-  File? _pickedImage;
+  XFile? _pickedImage;
+  Uint8List? _pickedImageBytes;
   bool _isActive = false;
 
   @override
@@ -45,7 +46,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
 
   Future<void> _loadData() async {
     final uid = _service.currentUser?.id;
-    if (uid == null) return;
+    if (uid == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
 
     final profile = await _service.getProfile(uid);
     final sellerProfile = await _service.getSellerProfile(uid);
@@ -69,7 +73,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       _rating = (sellerProfile['average_rating'] ?? 0.0).toDouble();
     }
 
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _pickImage() async {
@@ -77,8 +81,17 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 70,
+      maxWidth: 800,
     );
-    if (picked != null) setState(() => _pickedImage = File(picked.path));
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      if (mounted) {
+        setState(() {
+          _pickedImage = picked;
+          _pickedImageBytes = bytes;
+        });
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -101,23 +114,37 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
 
     try {
       final uid = user.id;
+      String? newAvatarUrl = _avatarUrl;
 
-      if (_pickedImage != null) {
+      // ── Avatar Upload ──────────────────────────
+      if (_pickedImage != null && _pickedImageBytes != null) {
         try {
-          _avatarUrl = await _service.uploadAvatar(uid, _pickedImage!);
+          newAvatarUrl = await _service.uploadAvatar(
+            uid,
+            _pickedImage!.name,
+            _pickedImageBytes!,
+          );
         } catch (e) {
-          // Avatar upload failed, but continue with profile save
           debugPrint('Avatar upload failed: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Avatar upload failed: $e'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
       }
 
+      // ── Update Profiles ────────────────────────
       await _service.updateProfile(uid, {
         'full_name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'city': _cityCtrl.text.trim(),
         'area': _areaCtrl.text.trim(),
         'full_address': _addressCtrl.text.trim(),
-        if (_avatarUrl != null) 'avatar_url': _avatarUrl,
+        if (newAvatarUrl != null) 'avatar_url': newAvatarUrl,
       });
 
       await _service.upsertSellerProfile(uid, {
@@ -132,16 +159,24 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        setState(() => _isActive = true);
+        setState(() {
+          _avatarUrl = newAvatarUrl;
+          _pickedImage = null;
+          _pickedImageBytes = null;
+          _isActive = true;
+        });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -156,6 +191,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     super.dispose();
   }
 
+  // ─────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -176,7 +214,6 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                           if (!_isActive) _buildWarningBanner(),
                           const SizedBox(height: 20),
 
-                          // Stats cards
                           _buildStatsRow(),
                           const SizedBox(height: 20),
 
@@ -186,14 +223,16 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                               _nameCtrl,
                               'Full Name',
                               Icons.person_outline,
-                              validator: (v) => v!.isEmpty ? 'Required' : null,
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Required' : null,
                             ),
                             _buildField(
                               _phoneCtrl,
                               'Phone Number',
                               Icons.phone_outlined,
                               keyboardType: TextInputType.phone,
-                              validator: (v) => v!.isEmpty ? 'Required' : null,
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Required' : null,
                             ),
                           ]),
 
@@ -203,9 +242,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                               _cityCtrl,
                               'City',
                               Icons.location_city_outlined,
-                              validator: (v) => v!.isEmpty ? 'Required' : null,
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Required' : null,
                             ),
-                            _buildField(_areaCtrl, 'Area', Icons.map_outlined),
+                            _buildField(
+                                _areaCtrl, 'Area', Icons.map_outlined),
                             _buildField(
                               _addressCtrl,
                               'Full Address',
@@ -237,153 +278,194 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     );
   }
 
-  // ──────────────────────────────────────────
-  // WIDGETS
-  // ──────────────────────────────────────────
-
+  // ─────────────────────────────────────────────────────────
+  // SLIVER APP BAR — Avatar সহ সঠিকভাবে
+  // ─────────────────────────────────────────────────────────
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 260,
+      expandedHeight: 290,
       pinned: true,
       backgroundColor: Colors.deepPurple,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.deepPurple, Color(0xFF7C3AED)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 55,
-                        backgroundColor: Colors.white24,
-                        backgroundImage: _pickedImage != null
-                            ? FileImage(_pickedImage!) as ImageProvider
-                            : (_avatarUrl != null
-                                  ? NetworkImage(_avatarUrl!)
-                                  : null),
-                        child: (_pickedImage == null && _avatarUrl == null)
-                            ? const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.white,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            size: 18,
-                            color: Colors.deepPurple,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _nameCtrl.text.isEmpty ? 'Your Name' : _nameCtrl.text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Rating stars
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ...List.generate(
-                      5,
-                      (i) => Icon(
-                        i < _rating.round() ? Icons.star : Icons.star_border,
-                        color: Colors.amber,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_rating.toStringAsFixed(1)} • SELLER',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+      // ── Back Button ──────────────────────────
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        onPressed: () {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        },
       ),
       actions: [
         IconButton(
           icon: const Icon(Icons.logout, color: Colors.white),
           onPressed: () async {
             await _service.signOut();
-            if (mounted) Navigator.pushReplacementNamed(context, '/profile');
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/profile');
+            }
           },
         ),
       ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4527A0), Color(0xFF7B1FA2)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 60),
+              // ── FIXED: Avatar ──────────────────
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 3,
+                        ),
+                        color: Colors.white24,
+                      ),
+                      child: ClipOval(child: _buildAvatarImage()),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 18,
+                          color: Colors.deepPurple,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _nameCtrl.text.isNotEmpty
+                    ? _nameCtrl.text
+                    : 'Seller Name',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              // Rating stars
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ...List.generate(
+                    5,
+                    (i) => Icon(
+                      i < _rating.round()
+                          ? Icons.star
+                          : Icons.star_border,
+                      color: Colors.amber,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${_rating.toStringAsFixed(1)} • SELLER',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
+  // ── FIXED: Avatar Image Builder ──────────────────────────
+  Widget _buildAvatarImage() {
+    if (_pickedImageBytes != null) {
+      return Image.memory(
+        _pickedImageBytes!,
+        width: 110,
+        height: 110,
+        fit: BoxFit.cover,
+      );
+    }
+    if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
+      return Image.network(
+        _avatarUrl!,
+        width: 110,
+        height: 110,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Avatar load error: $error');
+          return _defaultAvatarIcon();
+        },
+      );
+    }
+    return _defaultAvatarIcon();
+  }
+
+  Widget _defaultAvatarIcon() {
+    return const Icon(Icons.person, size: 60, color: Colors.white);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // OTHER WIDGETS
+  // ─────────────────────────────────────────────────────────
   Widget _buildStatsRow() {
     return Row(
       children: [
-        _buildStatCard(
-          'Total',
-          _totalListings.toString(),
-          Icons.list_alt,
-          Colors.blue,
-        ),
+        _buildStatCard('Total', _totalListings.toString(),
+            Icons.list_alt, Colors.blue),
         const SizedBox(width: 10),
-        _buildStatCard(
-          'Active',
-          _activeListings.toString(),
-          Icons.check_circle_outline,
-          Colors.green,
-        ),
+        _buildStatCard('Active', _activeListings.toString(),
+            Icons.check_circle_outline, Colors.green),
         const SizedBox(width: 10),
-        _buildStatCard(
-          'Sold',
-          _soldProperties.toString(),
-          Icons.handshake_outlined,
-          Colors.orange,
-        ),
+        _buildStatCard('Sold', _soldProperties.toString(),
+            Icons.handshake_outlined, Colors.orange),
       ],
     );
   }
 
   Widget _buildStatCard(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+      String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -410,10 +492,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 color: color,
               ),
             ),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
+            Text(label,
+                style:
+                    const TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         ),
       ),
@@ -475,8 +556,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       child: Column(
         children: children
             .map(
-              (w) =>
-                  Padding(padding: const EdgeInsets.only(bottom: 12), child: w),
+              (w) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: w,
+              ),
             )
             .toList(),
       ),
@@ -500,7 +583,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.deepPurple),
+        prefixIcon: const Icon(Icons.edit_outlined, color: Colors.deepPurple),
         filled: true,
         fillColor: const Color(0xFFF5F7FA),
         border: OutlineInputBorder(
@@ -509,7 +592,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.deepPurple, width: 1.5),
+          borderSide:
+              const BorderSide(color: Colors.deepPurple, width: 1.5),
         ),
       ),
     );

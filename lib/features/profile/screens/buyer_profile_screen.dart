@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'dart:ui';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
@@ -15,10 +14,11 @@ class BuyerProfileScreen extends StatefulWidget {
 class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   final _service = SupabaseService();
   final _formKey = GlobalKey<FormState>();
+
   bool _isLoading = true;
   bool _isSaving = false;
 
-  // ── Basic Info Controllers ──
+  // Controllers
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
@@ -26,7 +26,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   final _addressCtrl = TextEditingController();
   final _preferredLocationCtrl = TextEditingController();
 
-  // ── Buyer Specific ──
+  // Buyer Specific
   String _preferredType = 'apartment';
   final _budgetMinCtrl = TextEditingController();
   final _budgetMaxCtrl = TextEditingController();
@@ -34,7 +34,8 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   final _sizeCtrl = TextEditingController();
 
   String? _avatarUrl;
-  File? _pickedImage;
+  XFile? _pickedImage;
+  Uint8List? _pickedImageBytes;
   bool _isActive = false;
 
   @override
@@ -45,7 +46,10 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
 
   Future<void> _loadData() async {
     final uid = _service.currentUser?.id;
-    if (uid == null) return;
+    if (uid == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
 
     final profile = await _service.getProfile(uid);
     final buyerProfile = await _service.getBuyerProfile(uid);
@@ -62,57 +66,71 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     }
 
     if (buyerProfile != null) {
-      _preferredType = buyerProfile['preferred_property_type'] ?? 'apartment';
+      _preferredType =
+          buyerProfile['preferred_property_type'] ?? 'apartment';
       _budgetMinCtrl.text = buyerProfile['budget_min']?.toString() ?? '';
       _budgetMaxCtrl.text = buyerProfile['budget_max']?.toString() ?? '';
-      _bedroomsCtrl.text = buyerProfile['preferred_bedrooms']?.toString() ?? '';
-      _sizeCtrl.text = buyerProfile['preferred_size_sqft']?.toString() ?? '';
+      _bedroomsCtrl.text =
+          buyerProfile['preferred_bedrooms']?.toString() ?? '';
+      _sizeCtrl.text =
+          buyerProfile['preferred_size_sqft']?.toString() ?? '';
     }
 
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 70,
+      imageQuality: 75,
+      maxWidth: 800,
     );
-    if (picked != null) setState(() => _pickedImage = File(picked.path));
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      if (mounted) {
+        setState(() {
+          _pickedImage = picked;
+          _pickedImageBytes = bytes;
+        });
+      }
+    }
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     final user = _service.currentUser;
-    if (user == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: User not authenticated'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
+    if (user == null) return;
 
     setState(() => _isSaving = true);
 
     try {
       final uid = user.id;
+      String? newAvatarUrl = _avatarUrl;
 
-      // Avatar upload যদি নতুন image থাকে
-      if (_pickedImage != null) {
+      // ── Avatar Upload ──────────────────────────
+      if (_pickedImageBytes != null && _pickedImage != null) {
         try {
-          _avatarUrl = await _service.uploadAvatar(uid, _pickedImage!);
+          newAvatarUrl = await _service.uploadAvatar(
+            uid,
+            _pickedImage!.name,
+            _pickedImageBytes!,
+          );
         } catch (e) {
-          // Avatar upload failed, but continue with profile save
           debugPrint('Avatar upload failed: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Avatar upload failed: $e'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
       }
 
-      // Basic profile update
+      // ── Update Profiles ────────────────────────
       await _service.updateProfile(uid, {
         'full_name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
@@ -120,43 +138,50 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
         'area': _areaCtrl.text.trim(),
         'full_address': _addressCtrl.text.trim(),
         'preferred_location': _preferredLocationCtrl.text.trim(),
-        if (_avatarUrl != null) 'avatar_url': _avatarUrl,
+        if (newAvatarUrl != null) 'avatar_url': newAvatarUrl,
       });
 
-      // Buyer specific profile upsert
       final buyerData = <String, dynamic>{
         'preferred_property_type': _preferredType,
       };
 
-      final budgetMin = double.tryParse(_budgetMinCtrl.text);
-      final budgetMax = double.tryParse(_budgetMaxCtrl.text);
+      final min = double.tryParse(_budgetMinCtrl.text);
+      final max = double.tryParse(_budgetMaxCtrl.text);
       final bedrooms = int.tryParse(_bedroomsCtrl.text);
       final size = int.tryParse(_sizeCtrl.text);
 
-      if (budgetMin != null) buyerData['budget_min'] = budgetMin;
-      if (budgetMax != null) buyerData['budget_max'] = budgetMax;
+      if (min != null) buyerData['budget_min'] = min;
+      if (max != null) buyerData['budget_max'] = max;
       if (bedrooms != null) buyerData['preferred_bedrooms'] = bedrooms;
       if (size != null) buyerData['preferred_size_sqft'] = size;
 
       await _service.upsertBuyerProfile(uid, buyerData);
 
       if (mounted) {
+        setState(() {
+          _avatarUrl = newAvatarUrl;
+          _pickedImage = null;
+          _pickedImageBytes = null;
+          _isActive = true;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Profile saved successfully!'),
             backgroundColor: Colors.green,
           ),
         );
-        setState(() => _isActive = true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -175,6 +200,9 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     super.dispose();
   }
 
+  // ─────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -192,7 +220,6 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Status chip
                           if (!_isActive) _buildWarningBanner(),
                           const SizedBox(height: 20),
 
@@ -202,14 +229,16 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                               _nameCtrl,
                               'Full Name',
                               Icons.person_outline,
-                              validator: (v) => v!.isEmpty ? 'Required' : null,
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Required' : null,
                             ),
                             _buildField(
                               _phoneCtrl,
                               'Phone Number',
                               Icons.phone_outlined,
                               keyboardType: TextInputType.phone,
-                              validator: (v) => v!.isEmpty ? 'Required' : null,
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Required' : null,
                             ),
                           ]),
 
@@ -219,9 +248,11 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                               _cityCtrl,
                               'City',
                               Icons.location_city_outlined,
-                              validator: (v) => v!.isEmpty ? 'Required' : null,
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Required' : null,
                             ),
-                            _buildField(_areaCtrl, 'Area', Icons.map_outlined),
+                            _buildField(
+                                _areaCtrl, 'Area', Icons.map_outlined),
                             _buildField(
                               _addressCtrl,
                               'Full Address',
@@ -295,115 +326,176 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     );
   }
 
-  // ──────────────────────────────────────────
-  // WIDGETS
-  // ──────────────────────────────────────────
-
+  // ─────────────────────────────────────────────────────────
+  // SLIVER APP BAR — Avatar সহ সঠিকভাবে
+  // ─────────────────────────────────────────────────────────
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 260,
+      expandedHeight: 270,
       pinned: true,
       backgroundColor: AppColors.primary,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.7),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 55,
-                        backgroundColor: Colors.white24,
-                        backgroundImage: _pickedImage != null
-                            ? FileImage(_pickedImage!) as ImageProvider
-                            : (_avatarUrl != null
-                                  ? NetworkImage(_avatarUrl!)
-                                  : null),
-                        child: (_pickedImage == null && _avatarUrl == null)
-                            ? const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.white,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.camera_alt,
-                            size: 18,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _nameCtrl.text.isEmpty ? 'Your Name' : _nameCtrl.text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    '🏠 BUYER',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      // ── Back Button ──────────────────────────
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        onPressed: () {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        },
       ),
       actions: [
         IconButton(
           icon: const Icon(Icons.logout, color: Colors.white),
           onPressed: () async {
             await _service.signOut();
-            if (mounted) Navigator.pushReplacementNamed(context, '/profile');
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/profile');
+            }
           },
         ),
       ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.primary.withOpacity(0.75),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 60),
+              // ── Avatar with Camera Button ──────
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // ── FIXED: Avatar সঠিকভাবে দেখাবে ──
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 3,
+                        ),
+                        color: Colors.white24,
+                      ),
+                      child: ClipOval(
+                        child: _buildAvatarImage(),
+                      ),
+                    ),
+                    // Camera icon
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.camera_alt,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _nameCtrl.text.isNotEmpty ? _nameCtrl.text : 'Your Name',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  '🏠 BUYER',
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
+  // ── FIXED: Avatar Image Builder ──────────────────────────
+  // locally picked bytes → network url → default icon — এই ক্রমে দেখাবে
+  Widget _buildAvatarImage() {
+    // ১. নতুন pick করা image আছে?
+    if (_pickedImageBytes != null) {
+      return Image.memory(
+        _pickedImageBytes!,
+        width: 110,
+        height: 110,
+        fit: BoxFit.cover,
+      );
+    }
+    // ২. Supabase থেকে আসা URL আছে?
+    if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
+      return Image.network(
+        _avatarUrl!,
+        width: 110,
+        height: 110,
+        fit: BoxFit.cover,
+        // Loading placeholder
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          );
+        },
+        // Error fallback
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Avatar load error: $error');
+          return _defaultAvatarIcon();
+        },
+      );
+    }
+    // ৩. কিছু নেই → default icon
+    return _defaultAvatarIcon();
+  }
+
+  Widget _defaultAvatarIcon() {
+    return const Icon(Icons.person, size: 60, color: Colors.white);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // OTHER WIDGETS
+  // ─────────────────────────────────────────────────────────
   Widget _buildWarningBanner() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -412,11 +504,11 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.orange.shade200),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-          const SizedBox(width: 10),
-          const Expanded(
+          Icon(Icons.warning_amber_rounded, color: Colors.orange),
+          SizedBox(width: 10),
+          Expanded(
             child: Text(
               'Profile incomplete! Fill in your name, phone & city to activate your account.',
               style: TextStyle(color: Colors.orange, fontSize: 13),
@@ -459,8 +551,10 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
       child: Column(
         children: children
             .map(
-              (w) =>
-                  Padding(padding: const EdgeInsets.only(bottom: 12), child: w),
+              (w) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: w,
+              ),
             )
             .toList(),
       ),
@@ -471,14 +565,12 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     TextEditingController ctrl,
     String label,
     IconData icon, {
-    bool obscure = false,
     TextInputType? keyboardType,
     int maxLines = 1,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: ctrl,
-      obscureText: obscure,
       keyboardType: keyboardType,
       maxLines: maxLines,
       validator: validator,
@@ -504,7 +596,8 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
       value: _preferredType,
       decoration: InputDecoration(
         labelText: 'Preferred Property Type',
-        prefixIcon: Icon(Icons.home_work_outlined, color: AppColors.primary),
+        prefixIcon:
+            Icon(Icons.home_work_outlined, color: AppColors.primary),
         filled: true,
         fillColor: const Color(0xFFF5F7FA),
         border: OutlineInputBorder(

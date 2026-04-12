@@ -38,7 +38,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         _adminProfile = profile;
       });
       await _loadStats();
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -46,19 +46,14 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     try {
       final supabase = _service.supabaseClient;
 
-      // Total Users
       final usersCount = await supabase.from('profiles').count();
-
-      // Total Properties
       final propertiesCount = await supabase.from('properties').count();
 
-      // Total Sellers
       final sellersRes = await supabase
           .from('profiles')
           .select('id')
           .eq('role', 'seller');
 
-      // Total Buyers
       final buyersRes = await supabase
           .from('profiles')
           .select('id')
@@ -73,11 +68,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         });
       }
     } catch (e) {
-      debugPrint("Error loading stats: $e");
+      debugPrint('Error loading stats: $e');
     }
   }
-  // ====================================================
 
+  // ─────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -111,15 +108,40 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     );
   }
 
+  // ─────────────────────────────────────────────────────────
+  // SLIVER APP BAR — Back Button + Avatar Fix
+  // ─────────────────────────────────────────────────────────
   Widget _buildSliverAppBar() {
     final name = _adminProfile?['full_name'] ?? 'Admin User';
     final email = _service.currentUser?.email ?? 'admin@estatex.com';
-    final avatar = _adminProfile?['avatar_url'];
+    final avatarUrl = _adminProfile?['avatar_url'] as String?;
 
     return SliverAppBar(
-      expandedHeight: 240,
+      expandedHeight: 250,
       pinned: true,
       backgroundColor: Colors.red.shade700,
+      // ── Back Button ──────────────────────────
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        onPressed: () {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        },
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.logout, color: Colors.white),
+          onPressed: () async {
+            await _service.signOut();
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/profile');
+            }
+          },
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -132,18 +154,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 50),
-              CircleAvatar(
-                radius: 45,
-                backgroundColor: Colors.white24,
-                backgroundImage: avatar != null ? NetworkImage(avatar) : null,
-                child: avatar == null
-                    ? const Icon(
-                        Icons.admin_panel_settings,
-                        size: 50,
-                        color: Colors.white,
-                      )
-                    : null,
+              const SizedBox(height: 60),
+              // ── FIXED: Admin Avatar ────────────
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  color: Colors.white24,
+                ),
+                child: ClipOval(
+                  child: _buildAdminAvatar(avatarUrl),
+                ),
               ),
               const SizedBox(height: 12),
               Text(
@@ -177,18 +200,45 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           ),
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.logout, color: Colors.white),
-          onPressed: () async {
-            await _service.signOut();
-            if (mounted) Navigator.pushReplacementNamed(context, '/profile');
-          },
-        ),
-      ],
     );
   }
 
+  // ── FIXED: Admin Avatar Builder ──────────────────────────
+  Widget _buildAdminAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return Image.network(
+        avatarUrl,
+        width: 90,
+        height: 90,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(
+            Icons.admin_panel_settings,
+            size: 50,
+            color: Colors.white,
+          );
+        },
+      );
+    }
+    return const Icon(
+      Icons.admin_panel_settings,
+      size: 50,
+      color: Colors.white,
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // OTHER WIDGETS (unchanged)
+  // ─────────────────────────────────────────────────────────
   Widget _buildStatsGrid() {
     return GridView.count(
       crossAxisCount: 2,
@@ -227,11 +277,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   }
 
   Widget _buildStatTile(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -309,32 +355,54 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             Icons.security_rounded,
           ),
           _buildDivider(),
-          _buildInfoRow('Email Address', email, Icons.alternate_email_rounded),
+          _buildInfoRow(
+              'Email Address', email, Icons.alternate_email_rounded),
         ],
       ),
     );
   }
 
   Widget _buildInfoRow(String label, String value, IconData icon) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.red.shade400, size: 20),
-      title: Text(
-        label,
-        style: const TextStyle(color: Colors.grey, fontSize: 13),
-      ),
-      trailing: Text(
-        value,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.red.shade400, size: 20),
+          const SizedBox(width: 12),
+          // Label (fixed width)
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Value (fills remaining space, wraps if needed)
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDivider() => Divider(
-    color: Colors.grey.shade100,
-    height: 1,
-    indent: 20,
-    endIndent: 20,
-  );
+        color: Colors.grey.shade100,
+        height: 1,
+        indent: 20,
+        endIndent: 20,
+      );
 
   Widget _buildActionCard() {
     return Container(
@@ -381,16 +449,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   }
 
   Widget _buildActionTile(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+      String title, IconData icon, Color color, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(
         title,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        style:
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: onTap,
