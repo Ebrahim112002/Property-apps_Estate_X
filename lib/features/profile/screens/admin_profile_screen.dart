@@ -34,9 +34,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
     final profile = await _service.getProfile(uid);
     if (mounted) {
-      setState(() {
-        _adminProfile = profile;
-      });
+      setState(() => _adminProfile = profile);
       await _loadStats();
       if (mounted) setState(() => _isLoading = false);
     }
@@ -72,13 +70,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     }
   }
 
-  // ─────────────────────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : CustomScrollView(
@@ -86,19 +81,21 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 _buildSliverAppBar(),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionTitle('📊 Platform Overview'),
+                        _buildSectionTitle('Platform Overview'),
+                        const SizedBox(height: 16),
                         _buildStatsGrid(),
-                        const SizedBox(height: 25),
-                        _buildSectionTitle('👤 Admin Info'),
+                        const SizedBox(height: 32),
+                        _buildSectionTitle('Admin Information'),
+                        const SizedBox(height: 12),
                         _buildAdminInfoCard(),
-                        const SizedBox(height: 25),
-                        _buildSectionTitle('⚙️ Admin Actions'),
+                        const SizedBox(height: 32),
+                        _buildSectionTitle('Quick Actions'),
+                        const SizedBox(height: 12),
                         _buildActionCard(),
-                        const SizedBox(height: 40),
                       ],
                     ),
                   ),
@@ -108,37 +105,28 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────
-  // SLIVER APP BAR — Back Button + Avatar Fix
-  // ─────────────────────────────────────────────────────────
+  // ────────────────────── Modern Sliver AppBar ──────────────────────
   Widget _buildSliverAppBar() {
-    final name = _adminProfile?['full_name'] ?? 'Admin User';
+    final name = _adminProfile?['full_name'] ?? 'System Admin';
     final email = _service.currentUser?.email ?? 'admin@estatex.com';
     final avatarUrl = _adminProfile?['avatar_url'] as String?;
 
     return SliverAppBar(
-      expandedHeight: 250,
+      expandedHeight: 280,
       pinned: true,
-      backgroundColor: Colors.red.shade700,
-      // ── Back Button ──────────────────────────
+      floating: false,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-        onPressed: () {
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          } else {
-            Navigator.pushReplacementNamed(context, '/home');
-          }
-        },
+        onPressed: () => Navigator.maybePop(context),
       ),
       actions: [
         IconButton(
           icon: const Icon(Icons.logout, color: Colors.white),
           onPressed: () async {
             await _service.signOut();
-            if (mounted) {
-              Navigator.pushReplacementNamed(context, '/profile');
-            }
+            if (mounted) Navigator.pushReplacementNamed(context, '/profile');
           },
         ),
       ],
@@ -146,148 +134,136 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.red.shade900, Colors.red.shade500],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.red.shade900,
+                Colors.red.shade700,
+              ],
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 60),
-              // ── FIXED: Admin Avatar ────────────
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  color: Colors.white24,
-                ),
-                child: ClipOval(
-                  child: _buildAdminAvatar(avatarUrl),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                email,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Chip(
-                label: const Text(
-                  '🔑 SYSTEM ADMIN',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 20),
+                // Modern Avatar with glow effect
+                Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: _buildAdminAvatar(avatarUrl),
                   ),
                 ),
-                backgroundColor: Colors.black26,
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  email,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const Text(
+                    '🔑 SYSTEM ADMINISTRATOR',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ── FIXED: Admin Avatar Builder ──────────────────────────
   Widget _buildAdminAvatar(String? avatarUrl) {
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       return Image.network(
         avatarUrl,
-        width: 90,
-        height: 90,
         fit: BoxFit.cover,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
-          return const Center(
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
-            ),
-          );
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
         },
-        errorBuilder: (context, error, stackTrace) {
-          return const Icon(
-            Icons.admin_panel_settings,
-            size: 50,
-            color: Colors.white,
-          );
-        },
+        errorBuilder: (_, __, ___) => _defaultAdminIcon(),
       );
     }
-    return const Icon(
-      Icons.admin_panel_settings,
-      size: 50,
-      color: Colors.white,
+    return _defaultAdminIcon();
+  }
+
+  Widget _defaultAdminIcon() {
+    return Container(
+      color: Colors.red.shade800,
+      child: const Icon(
+        Icons.admin_panel_settings,
+        size: 55,
+        color: Colors.white,
+      ),
     );
   }
 
-  // ─────────────────────────────────────────────────────────
-  // OTHER WIDGETS (unchanged)
-  // ─────────────────────────────────────────────────────────
+  // ────────────────────── Stats Grid (Modern) ──────────────────────
   Widget _buildStatsGrid() {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 15,
-      mainAxisSpacing: 15,
-      childAspectRatio: 1.4,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.45,
       children: [
-        _buildStatTile(
-          'Total Users',
-          _totalUsers.toString(),
-          Icons.people_alt_rounded,
-          Colors.blue,
-        ),
-        _buildStatTile(
-          'Properties',
-          _totalProperties.toString(),
-          Icons.home_rounded,
-          Colors.green,
-        ),
-        _buildStatTile(
-          'Active Sellers',
-          _totalSellers.toString(),
-          Icons.badge_rounded,
-          Colors.orange,
-        ),
-        _buildStatTile(
-          'Total Buyers',
-          _totalBuyers.toString(),
-          Icons.shopping_bag_rounded,
-          Colors.purple,
-        ),
+        _buildStatTile('Total Users', _totalUsers.toString(), Icons.people_alt, Colors.blue.shade600),
+        _buildStatTile('Properties', _totalProperties.toString(), Icons.home, Colors.green.shade600),
+        _buildStatTile('Active Sellers', _totalSellers.toString(), Icons.storefront, Colors.orange.shade600),
+        _buildStatTile('Total Buyers', _totalBuyers.toString(), Icons.person_search, Colors.purple.shade600),
       ],
     );
   }
 
-  Widget _buildStatTile(
-      String label, String value, IconData icon, Color color) {
+  Widget _buildStatTile(String label, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -296,39 +272,49 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 26),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          const Spacer(),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13.5,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
 
+  // Section Title (Modern)
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 19,
+        fontWeight: FontWeight.w700,
+        color: Colors.black87,
+        letterSpacing: -0.3,
+      ),
+    );
+  }
+
+  // Admin Info Card
   Widget _buildAdminInfoCard() {
     final uid = _service.currentUser?.id ?? 'N/A';
     final email = _service.currentUser?.email ?? 'N/A';
@@ -336,27 +322,22 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         children: [
-          _buildInfoRow('Admin ID', uid, Icons.fingerprint),
+          _buildInfoRow('Admin ID', uid, Icons.fingerprint_rounded),
           _buildDivider(),
-          _buildInfoRow(
-            'Access Level',
-            'Root Administrator',
-            Icons.security_rounded,
-          ),
+          _buildInfoRow('Access Level', 'Root Administrator', Icons.verified_user_rounded),
           _buildDivider(),
-          _buildInfoRow(
-              'Email Address', email, Icons.alternate_email_rounded),
+          _buildInfoRow('Email Address', email, Icons.email_rounded),
         ],
       ),
     );
@@ -364,32 +345,29 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
   Widget _buildInfoRow(String label, String value, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.red.shade400, size: 20),
-          const SizedBox(width: 12),
-          // Label (fixed width)
-          SizedBox(
-            width: 100,
+          Icon(icon, color: Colors.red.shade600, size: 22),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
             child: Text(
               label,
-              style: const TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
             ),
           ),
-          const SizedBox(width: 8),
-          // Value (fills remaining space, wraps if needed)
           Expanded(
+            flex: 3,
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
               textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14.5,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -400,79 +378,56 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   Widget _buildDivider() => Divider(
         color: Colors.grey.shade100,
         height: 1,
+        thickness: 1,
         indent: 20,
         endIndent: 20,
       );
 
+  // Action Card (more premium look)
   Widget _buildActionCard() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         children: [
-          _buildActionTile(
-            'User Management',
-            Icons.manage_accounts_rounded,
-            Colors.blue,
-            () {},
-          ),
-          _buildActionTile(
-            'Property Verification',
-            Icons.verified_user_rounded,
-            Colors.green,
-            () {},
-          ),
-          _buildActionTile(
-            'Platform Reports',
-            Icons.analytics_rounded,
-            Colors.orange,
-            () {},
-          ),
-          _buildActionTile(
-            'System Settings',
-            Icons.settings_applications_rounded,
-            Colors.grey,
-            () {},
-          ),
+          _buildActionTile('User Management', Icons.manage_accounts, Colors.blue.shade600, () {}),
+          _buildDivider(),
+          _buildActionTile('Property Verification', Icons.verified, Colors.green.shade600, () {}),
+          _buildDivider(),
+          _buildActionTile('Platform Reports', Icons.analytics, Colors.orange.shade600, () {}),
+          _buildDivider(),
+          _buildActionTile('System Settings', Icons.settings, Colors.grey.shade700, () {}),
         ],
       ),
     );
   }
 
-  Widget _buildActionTile(
-      String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildActionTile(String title, IconData icon, Color color, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: color),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: color, size: 26),
+      ),
       title: Text(
         title,
-        style:
-            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
       ),
-      trailing: const Icon(Icons.chevron_right_rounded),
+      trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
       onTap: onTap,
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 5, bottom: 15),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
-      ),
     );
   }
 }
