@@ -16,6 +16,11 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  late Animation<Offset> _property1Animation; // Left
+  late Animation<Offset> _property2Animation; // Center
+  late Animation<Offset> _property3Animation; // Right
 
   @override
   void initState() {
@@ -23,23 +28,50 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 2400),
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.75,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    _scaleAnimation = Tween<double>(begin: 0.75, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    // Staggered animation
+    _property1Animation = Tween<Offset>(
+      begin: const Offset(0, 1.6),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
+    ));
+
+    _property2Animation = Tween<Offset>(
+      begin: const Offset(0, 1.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
+    ));
+
+    _property3Animation = Tween<Offset>(
+      begin: const Offset(0, 1.6),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
+    ));
 
     _controller.forward();
 
-    // ৪ সেকেন্ড পর হোম স্ক্রিনে যাবে
-    Timer(const Duration(seconds: 4), () {
+    Timer(const Duration(milliseconds: 5500), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -60,93 +92,138 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // Background Image
+          // Background
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: NetworkImage('https://i.ibb.co/XZqp0N2s/image.png'),
+                image: NetworkImage('https://i.ibb.co.com/wZmgvr7T/image.png'),
                 fit: BoxFit.cover,
               ),
             ),
           ),
 
-          // Dark Overlay + Blur
+          // Blur & Overlay
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(color: Colors.black.withOpacity(0.45)),
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(color: Colors.black.withOpacity(0.52)),
             ),
           ),
 
-          // Gradient Overlay (Top to Bottom)
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                 ),
               ),
             ),
           ),
 
           // Main Content
-          Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.15),
-                    end: Offset.zero,
-                  ).animate(_controller),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildPremiumLogo(),
-                      const SizedBox(height: 28),
+          SafeArea(
+            child: Column(
+              children: [
+                const Spacer(flex: 2),
 
-                      // Brand Name
-                      const Text(
-                        "EstateX",
-                        style: TextStyle(
-                          fontSize: 52,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 4,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 20,
-                              color: Colors.black87,
-                              offset: Offset(3, 6),
+                // EstateX Logo & Text
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: Column(
+                        children: [
+                          _buildPremiumLogo(),
+                          const SizedBox(height: 24),
+                          const Text(
+                            "EstateX",
+                            style: TextStyle(
+                              fontSize: 56,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 3,
+                              shadows: [
+                                Shadow(blurRadius: 25, color: Colors.deepPurple, offset: Offset(0, 8)),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Premium Living Redefined",
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white.withOpacity(0.9),
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 8),
-
-                      // Slogan
-                      Text(
-                        "Elevating Your Living Experience",
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: Colors.white.withOpacity(0.85),
-                          letterSpacing: 1.8,
-                          fontWeight: FontWeight.w300,
-                        ),
-                      ),
-
-                      const SizedBox(height: 90),
-
-                      // Loading Indicator
-                      const SpinKitFoldingCube(color: Colors.white, size: 38),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+
+                const Spacer(flex: 3),
+
+                // 3 Property Images - Reference Style
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    height: 260,
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        // Left Image
+                        SlideTransition(
+                          position: _property1Animation,
+                          child: Transform.translate(
+                            offset: const Offset(-75, 20),
+                            child: Transform.rotate(
+                              angle: -0.18,
+                              child: _buildPropertyCard(
+                                'https://i.ibb.co.com/m5bWYCRv/image.png',
+                                width: 138,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Center Image (Main & Largest)
+                        SlideTransition(
+                          position: _property2Animation,
+                          child: _buildPropertyCard(
+                            'https://i.ibb.co.com/zTdh8ZQb/image.png',
+                            width: 165,
+                          ),
+                        ),
+
+                        // Right Image
+                        SlideTransition(
+                          position: _property3Animation,
+                          child: Transform.translate(
+                            offset: const Offset(75, 20),
+                            child: Transform.rotate(
+                              angle: 0.18,
+                              child: _buildPropertyCard(
+                                'https://i.ibb.co.com/dw2ph2vr/image.png',
+                                width: 138,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 50),
+                const SpinKitFoldingCube(color: Colors.white, size: 36),
+                const SizedBox(height: 50),
+              ],
             ),
           ),
         ],
@@ -154,42 +231,45 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildPremiumLogo() {
+  Widget _buildPropertyCard(String imageUrl, {double width = 150}) {
     return Container(
-      height: 138,
-      width: 138,
+      width: width,
+      height: 195,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.12),
-        border: Border.all(color: Colors.white.withOpacity(0.6), width: 2.5),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 25,
-            spreadRadius: 6,
-          ),
-          BoxShadow(
-            color: Colors.deepPurple.withOpacity(0.25),
-            blurRadius: 30,
-            spreadRadius: -8,
+            color: Colors.black.withOpacity(0.55),
+            blurRadius: 22,
+            spreadRadius: 4,
+            offset: const Offset(0, 15),
           ),
         ],
       ),
-      child: ClipOval(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            color: Colors.transparent,
-            child: const Center(
-              child: Icon(
-                Icons.home_work_rounded,
-                size: 78,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Image.network(imageUrl, fit: BoxFit.cover),
       ),
+    );
+  }
+
+  Widget _buildPremiumLogo() {
+    return Container(
+      height: 110,
+      width: 110,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.15),
+        border: Border.all(color: Colors.white.withOpacity(0.7), width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.withOpacity(0.6),
+            blurRadius: 30,
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: const Icon(Icons.villa_rounded, size: 58, color: Colors.white),
     );
   }
 }

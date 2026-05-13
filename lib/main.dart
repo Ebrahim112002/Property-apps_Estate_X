@@ -12,6 +12,7 @@ import 'features/profile/screens/profile_screen.dart';
 import 'features/profile/screens/admin_profile_screen.dart';
 import 'features/profile/screens/buyer_profile_screen.dart';
 import 'features/profile/screens/seller_profile_screen.dart';
+import './features/home/screens/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +39,7 @@ class EstateXApp extends StatelessWidget {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-
+        '/home': (context) => const HomeScreen(),
         // Role Checker Profile (সবচেয়ে গুরুত্বপূর্ণ)
         '/profile': (context) => const ProfileScreen(),
 
