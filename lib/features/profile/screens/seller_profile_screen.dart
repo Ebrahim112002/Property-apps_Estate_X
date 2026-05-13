@@ -93,20 +93,14 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       }
     }
   }
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     final user = _service.currentUser;
     if (user == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: User not authenticated'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not authenticated'), backgroundColor: Colors.red),
+      );
       return;
     }
 
@@ -116,7 +110,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       final uid = user.id;
       String? newAvatarUrl = _avatarUrl;
 
-      // ── Avatar Upload ──────────────────────────
+      // Avatar Upload
       if (_pickedImage != null && _pickedImageBytes != null) {
         try {
           newAvatarUrl = await _service.uploadAvatar(
@@ -126,60 +120,51 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           );
         } catch (e) {
           debugPrint('Avatar upload failed: $e');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Avatar upload failed: $e'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
         }
       }
 
-      // ── Update Profiles ────────────────────────
+      // Update Profile + Activate Account
       await _service.updateProfile(uid, {
         'full_name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'city': _cityCtrl.text.trim(),
         'area': _areaCtrl.text.trim(),
         'full_address': _addressCtrl.text.trim(),
+        'is_active': true,                    // ← এখানে অ্যাকটিভ হবে
         if (newAvatarUrl != null) 'avatar_url': newAvatarUrl,
       });
 
+      // Seller Specific
       await _service.upsertSellerProfile(uid, {
         'seller_type': _sellerType,
         'company_name': _companyCtrl.text.trim(),
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Profile saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
         setState(() {
           _avatarUrl = newAvatarUrl;
           _pickedImage = null;
           _pickedImageBytes = null;
           _isActive = true;
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Profile saved successfully! Your account is now active.'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
-
   @override
   void dispose() {
     _nameCtrl.dispose();

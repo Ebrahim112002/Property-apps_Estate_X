@@ -1,14 +1,16 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
 
 class HomeBottomNavBar extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
+  final VoidCallback onAuctionTapped;
 
   const HomeBottomNavBar({
     super.key,
     required this.selectedIndex,
     required this.onItemTapped,
+    required this.onAuctionTapped,
   });
 
   @override
@@ -16,39 +18,93 @@ class HomeBottomNavBar extends StatefulWidget {
 }
 
 class _HomeBottomNavBarState extends State<HomeBottomNavBar> {
+  // Royal Purple + Neon Color
+  final Color royalPurple = const Color(0xFF8B00FF);
+  final Color neonPurple = const Color(0xFFB14EFF);
+  final Color inactiveColor = const Color(0xFFAAAAAA);
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      // নিচের দিকে একটু বাড়তি হাইট দিচ্ছি যাতে পপ-আপ ইফেক্ট এর জন্য পর্যাপ্ত জায়গা থাকে
-      height: 100,
+      height: 105,
       color: Colors.transparent,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
         children: [
-          // মেইন নেভিগেশন বার (Deep Navy Background)
+          // Neon Glassmorphic Bottom Bar
           Container(
-            height: 75,
-            margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            height: 72,
+            margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.background, // আপনার লাক্সারি ডিপ নেভি ব্লু
-              borderRadius: BorderRadius.circular(35),
+              color: Colors.white.withOpacity(0.08), // Highly Transparent
+              borderRadius: BorderRadius.circular(40),
+              border: Border.all(
+                color: neonPurple.withOpacity(0.3),
+                width: 1.5,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.background.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  color: neonPurple.withOpacity(0.25),
+                  blurRadius: 25,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildNavItem(Icons.home_filled, 0),
-                _buildNavItem(Icons.search_rounded, 1),
-                _buildNavItem(Icons.favorite_rounded, 2),
-                _buildNavItem(Icons.person_rounded, 3),
-              ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(40),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildNavItem(Icons.home_rounded, 0),           // Home
+                    _buildNavItem(Icons.search_rounded, 1),          // Search
+                    const SizedBox(width: 70),                       // Space for Auction Button
+                    _buildNavItem(Icons.favorite_rounded, 2),        // Saved / Favorites
+                    _buildNavItem(Icons.dashboard_rounded, 3),       // Dashboard (Role based)
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Neon Floating Auction Button
+          Positioned(
+            bottom: 36,
+            child: GestureDetector(
+              onTap: widget.onAuctionTapped,
+              child: Container(
+                height: 70,
+                width: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [royalPurple, neonPurple],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: neonPurple.withOpacity(0.6),
+                      blurRadius: 25,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 10),
+                    ),
+                    BoxShadow(
+                      color: royalPurple.withOpacity(0.4),
+                      blurRadius: 35,
+                      spreadRadius: -8,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.gavel_rounded,
+                  color: Colors.white,
+                  size: 34,
+                ),
+              ),
             ),
           ),
         ],
@@ -63,63 +119,37 @@ class _HomeBottomNavBarState extends State<HomeBottomNavBar> {
       child: GestureDetector(
         onTap: () => widget.onItemTapped(index),
         behavior: HitTestBehavior.opaque,
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            // আইকন পপ-আপ অ্যানিমেশন
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeOutBack, // প্রিমিয়াম বাউন্স ইফেক্ট
-              // আইকনটি সিলেক্ট হলে ৩টি পিক্সেল উপরে পপ-আপ করবে
-              transform: Matrix4.translationValues(0, isSelected ? -38 : 0, 0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // গোল্ডেন সার্কেল কন্টেইনার
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    padding: EdgeInsets.all(isSelected ? 14 : 10),
-                    decoration: BoxDecoration(
-                      // সিলেক্টেড অবস্থায় আপনার Accent (Warm Gold) কালার
-                      color: isSelected ? AppColors.accent : Colors.transparent,
-                      shape: BoxShape.circle,
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: AppColors.accent.withOpacity(0.4),
-                                blurRadius: 15,
-                                offset: const Offset(0, 8),
-                              )
-                            ]
-                          : [],
-                    ),
-                    child: Icon(
-                      icon,
-                      // আইকন কালার: সিলেক্ট হলে পিওর হোয়াইট, না হলে সেকেন্ডারি টেক্সট কালার
-                      color: isSelected ? Colors.white : AppColors.textSecondary.withOpacity(0.6),
-                      size: isSelected ? 28 : 24, // সিলেক্ট হলে বড় হবে
-                    ),
-                  ),
-                  
-                  // নিচের ছোট গোল্ডেন ডট ইন্ডিকেটর
-                  const SizedBox(height: 6),
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 300),
-                    opacity: isSelected ? 1 : 0,
-                    child: Container(
-                      width: 5,
-                      height: 5,
-                      decoration: const BoxDecoration(
-                        color: AppColors.accent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ],
+        child: SizedBox(
+          height: 68,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? neonPurple : inactiveColor,
+                size: 27.5,
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                height: 5,
+                width: isSelected ? 5 : 0,
+                decoration: BoxDecoration(
+                  color: neonPurple,
+                  shape: BoxShape.circle,
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: neonPurple.withOpacity(0.8),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          )
+                        ]
+                      : [],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

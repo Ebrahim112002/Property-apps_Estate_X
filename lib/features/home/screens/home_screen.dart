@@ -56,20 +56,42 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBody: true,
-      body: _selectedIndex == 3 
-          ? const ProfileScreen() 
-          : _buildHomeContent(),
-      bottomNavigationBar: HomeBottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: (index) => setState(() => _selectedIndex = index),
-      ),
-    );
-  }
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: AppColors.background,
+    extendBody: true,
+    // প্রতিটি ইনডেক্সের জন্য আলাদা স্ক্রিন সেট করা হয়েছে যাতে তারা ইন্ডিপেন্ডেন্ট থাকে
+    body: _buildScreen(_selectedIndex), 
+    bottomNavigationBar: HomeBottomNavBar(
+      selectedIndex: _selectedIndex,
+      onItemTapped: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
+      onAuctionTapped: () {
+        // অকশন বাটনটি সম্পূর্ণ আলাদাভাবে কাজ করবে
+        Navigator.pushNamed(context, '/auction-screen');
+      },
+    ),
+  );
+}
 
+// ইনডেক্স অনুযায়ী স্ক্রিন রিটার্ন করার লজিক
+Widget _buildScreen(int index) {
+  switch (index) {
+    case 0:
+      return _buildHomeContent();
+    case 1:
+      return const Center(child: Text("Search Screen"));
+    case 2:
+      return const Center(child: Text("Saved Properties"));
+    case 3:
+      return const ProfileScreen();
+    default:
+      return _buildHomeContent();
+  }
+}
   Widget _buildHomeContent() {
     return SafeArea(
       bottom: false,
