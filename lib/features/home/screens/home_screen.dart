@@ -11,6 +11,9 @@ import '../widgets/home_search_bar.dart';
 import '../widgets/home_section_header.dart';
 import '../widgets/property_card.dart';
 
+// Seller Dashboard
+import '../../profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -55,43 +58,75 @@ class _HomeScreenState extends State<HomeScreen> {
     return await _supabaseService.getProfile(user.id);
   }
 
-  @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: AppColors.background,
-    extendBody: true,
-    // প্রতিটি ইনডেক্সের জন্য আলাদা স্ক্রিন সেট করা হয়েছে যাতে তারা ইন্ডিপেন্ডেন্ট থাকে
-    body: _buildScreen(_selectedIndex), 
-    bottomNavigationBar: HomeBottomNavBar(
-      selectedIndex: _selectedIndex,
-      onItemTapped: (index) {
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
-      onAuctionTapped: () {
-        // অকশন বাটনটি সম্পূর্ণ আলাদাভাবে কাজ করবে
-        Navigator.pushNamed(context, '/auction-screen');
-      },
-    ),
-  );
-}
+  // ==================== Role Based Navigation ====================
+  void _onItemTapped(int index) async {
+    if (index == 3) {
+      // Dashboard Button
+      final user = _supabaseService.currentUser;
 
-// ইনডেক্স অনুযায়ী স্ক্রিন রিটার্ন করার লজিক
-Widget _buildScreen(int index) {
-  switch (index) {
-    case 0:
-      return _buildHomeContent();
-    case 1:
-      return const Center(child: Text("Search Screen"));
-    case 2:
-      return const Center(child: Text("Saved Properties"));
-    case 3:
-      return const ProfileScreen();
-    default:
-      return _buildHomeContent();
+      if (user == null) {
+        // লগইন না থাকলে Register এ নিয়ে যাবে
+        if (mounted) Navigator.pushNamed(context, '/register');
+        return;
+      }
+
+      try {
+        final role = await _supabaseService.getUserRole(user.id);
+
+        if (mounted) {
+          if (role == 'seller') {
+            Navigator.pushNamed(context, '/seller-dashboard');
+          } else if (role == 'admin') {
+            Navigator.pushNamed(context, '/admin-profile');
+          } else if (role == 'buyer') {
+            Navigator.pushNamed(context, '/buyer-profile');
+          } else {
+            // Default
+            setState(() => _selectedIndex = 3);
+          }
+        }
+      } catch (e) {
+        debugPrint('Role fetch error: $e');
+        if (mounted) Navigator.pushNamed(context, '/profile');
+      }
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
-}
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      extendBody: true,
+      body: _buildScreen(_selectedIndex),
+      bottomNavigationBar: HomeBottomNavBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped, // Updated here
+        onAuctionTapped: () {
+          Navigator.pushNamed(context, '/auction-screen');
+        },
+      ),
+    );
+  }
+
+  Widget _buildScreen(int index) {
+    switch (index) {
+      case 0:
+        return _buildHomeContent();
+      case 1:
+        return const Center(child: Text("Search Screen"));
+      case 2:
+        return const Center(child: Text("Saved Properties"));
+      case 3:
+        return const ProfileScreen(); // Default fallback (যদি কোনো সমস্যা হয়)
+      default:
+        return _buildHomeContent();
+    }
+  }
+
   Widget _buildHomeContent() {
     return SafeArea(
       bottom: false,
@@ -102,17 +137,13 @@ Widget _buildScreen(int index) {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: HomeHeader(
-                  onAvatarTap: () => setState(() => _selectedIndex = 3),
+                  onAvatarTap: () => _onItemTapped(3), // এটাও আপডেট করা হয়েছে
                 ),
               ),
-
               const SizedBox(height: 20),
-
-              // Search Bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: HomeSearchBar(
@@ -120,18 +151,12 @@ Widget _buildScreen(int index) {
                   onFilterTap: () {},
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // Banner
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: HomeBanner(),
               ),
-
               const SizedBox(height: 32),
-
-              // Filter Chips Section
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -142,26 +167,20 @@ Widget _buildScreen(int index) {
                 child: HomeFilterChips(
                   selectedType: selectedType,
                   selectedFilter: selectedFilter,
-                  onTypeChanged: (value) => setState(() => selectedType = value),
-                  onCategoryChanged: (value) => setState(() => selectedFilter = value),
+                  onTypeChanged: (value) =>
+                      setState(() => selectedType = value),
+                  onCategoryChanged: (value) =>
+                      setState(() => selectedFilter = value),
                 ),
               ),
-
-              // Best Offers Section
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
-                child: HomeSectionHeader(
-                  title: "Best Offers",
-                  onSeeAll: () {},
-                ),
+                child: HomeSectionHeader(title: "Best Offers", onSeeAll: () {}),
               ),
-
-              // Property List
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildPropertyList(),
               ),
-
               const SizedBox(height: 120),
             ],
           ),
@@ -189,9 +208,16 @@ Widget _buildScreen(int index) {
               padding: const EdgeInsets.all(60),
               child: Column(
                 children: [
-                  Icon(Icons.home_work_outlined, size: 80, color: Colors.grey.shade300),
+                  Icon(
+                    Icons.home_work_outlined,
+                    size: 80,
+                    color: Colors.grey.shade300,
+                  ),
                   const SizedBox(height: 16),
-                  const Text('No properties found', style: TextStyle(fontSize: 16)),
+                  const Text(
+                    'No properties found',
+                    style: TextStyle(fontSize: 16),
+                  ),
                 ],
               ),
             ),
@@ -203,7 +229,8 @@ Widget _buildScreen(int index) {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: properties.length,
-          itemBuilder: (context, index) => PropertyCard(property: properties[index]),
+          itemBuilder: (context, index) =>
+              PropertyCard(property: properties[index]),
         );
       },
     );

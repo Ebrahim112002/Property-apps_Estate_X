@@ -7,12 +7,17 @@ import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 
+// Home & Bottom Nav
+import 'features/home/screens/home_screen.dart';
+
+// Seller Dashboard
+import './features/profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
+
 // Profile Screens
 import 'features/profile/screens/profile_screen.dart';
 import 'features/profile/screens/admin_profile_screen.dart';
 import 'features/profile/screens/buyer_profile_screen.dart';
 import 'features/profile/screens/seller_profile_screen.dart';
-import './features/home/screens/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,10 +45,12 @@ class EstateXApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
-        // Role Checker Profile (সবচেয়ে গুরুত্বপূর্ণ)
-        '/profile': (context) => const ProfileScreen(),
 
-        // Specific Profiles
+        // Role Based Dashboard
+        '/seller-dashboard': (context) => const SellerDashboardHomeScreen(),
+
+        // Profile Routes
+        '/profile': (context) => const ProfileScreen(),
         '/admin-profile': (context) => const AdminProfileScreen(),
         '/buyer-profile': (context) => const BuyerProfileScreen(),
         '/seller-profile': (context) => const SellerProfileScreen(),
