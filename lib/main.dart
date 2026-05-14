@@ -11,13 +11,15 @@ import 'features/auth/screens/register_screen.dart';
 import 'features/home/screens/home_screen.dart';
 
 // Seller Dashboard
-import './features/profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
+import 'features/profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
 
 // Profile Screens
 import 'features/profile/screens/profile_screen.dart';
 import 'features/profile/screens/admin_profile_screen.dart';
 import 'features/profile/screens/buyer_profile_screen.dart';
 import 'features/profile/screens/seller_profile_screen.dart';
+
+import 'features/profile/screens/Dashboard/Sller_Dashboard/post_properties.dart'; 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +56,9 @@ class EstateXApp extends StatelessWidget {
         '/admin-profile': (context) => const AdminProfileScreen(),
         '/buyer-profile': (context) => const BuyerProfileScreen(),
         '/seller-profile': (context) => const SellerProfileScreen(),
+        
+        // Add Property Route
+        '/add-property': (context) => const AddPropertyScreen(),
       },
     );
   }

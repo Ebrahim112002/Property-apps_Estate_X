@@ -34,7 +34,7 @@ class PropertyCard extends StatelessWidget {
                   topRight: Radius.circular(24),
                 ),
                 child: Image.network(
-                  property.imageUrl,
+                  property.imageUrls.isNotEmpty ? property.imageUrls.first : '',
                   height: 210,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -42,7 +42,11 @@ class PropertyCard extends StatelessWidget {
                     return Container(
                       height: 210,
                       color: Colors.grey.shade200,
-                      child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
                     );
                   },
                 ),
@@ -71,7 +75,10 @@ class PropertyCard extends StatelessWidget {
                 left: 12,
                 top: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(12),

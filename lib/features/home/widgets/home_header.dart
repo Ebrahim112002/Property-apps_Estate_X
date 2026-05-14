@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../services/supabase_service.dart';
 
@@ -15,55 +16,53 @@ class HomeHeader extends StatelessWidget {
       future: _getProfile(service),
       builder: (context, snapshot) {
         final profile = snapshot.data;
-        final fullName = profile?['full_name'] ?? 'Md';
-        final area = profile?['area'] ?? 'Dhaka-1216';
-        final city = profile?['city'] ?? 'Mirpur';
+        final isLoggedIn = profile != null;
+
+        final fullName = profile?['full_name'] ?? '';
+        final firstName = _getFirstName(fullName);
         final avatarUrl = profile?['avatar_url'] as String?;
 
-        final firstName = _getFirstName(fullName);
-
         return Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Greeting + Location
+              // ==================== Left: EstateX + Greeting ====================
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const SizedBox(height: 6),
+
+                    // Dynamic Greeting
                     Text(
-                      "Hello, $firstName!",
+                      isLoggedIn ? "Hello, $firstName!" : _getGreeting(),
                       style: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 19,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                        letterSpacing: -0.2,
+                        color: Colors.white,
+                        letterSpacing: -0.3,
                       ),
                     ),
-                    const SizedBox(height: 7),
+
+                    const SizedBox(height: 6),
+
+                    // Date
                     Row(
                       children: [
-                        Icon(
-                          Icons.location_on_rounded,
-                          color: AppColors.primary,
-                          size: 19,
+                        const Icon(
+                          Icons.calendar_today_rounded,
+                          size: 15,
+                          color: Colors.white,
                         ),
                         const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            "$area, $city",
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          _getPremiumDate(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
                           ),
-                        ),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: Colors.grey,
                         ),
                       ],
                     ),
@@ -73,81 +72,84 @@ class HomeHeader extends StatelessWidget {
 
               const SizedBox(width: 16),
 
-              // Notification Icon with modern badge
-              Stack(
+              // ==================== Right Side: Notification + Avatar ====================
+              Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                  // Notification
+                  Stack(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.07),
+                              blurRadius: 15,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.notifications_outlined,
-                      size: 26,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  Positioned(
-                    right: 4,
-                    top: 4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          size: 26,
+                          color: Colors.black87,
+                        ),
                       ),
-                      child: const Text(
-                        ' ',
-                        style: TextStyle(fontSize: 8),
+                      Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Container(
+                          height: 8,
+                          width: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  // Avatar
+                  GestureDetector(
+                    onTap: onAvatarTap,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.4),
+                          width: 2.8,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 29,
+                        backgroundColor: Colors.white,
+                        backgroundImage:
+                            avatarUrl != null && avatarUrl.isNotEmpty
+                            ? NetworkImage(avatarUrl)
+                            : null,
+                        child: (avatarUrl == null || avatarUrl.isEmpty)
+                            ? const Icon(
+                                Icons.person_rounded,
+                                color: Colors.grey,
+                                size: 32,
+                              )
+                            : null,
                       ),
                     ),
                   ),
                 ],
-              ),
-
-              const SizedBox(width: 14),
-
-              // Avatar with border & shadow
-              GestureDetector(
-                onTap: onAvatarTap,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.3),
-                      width: 2.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.white,
-                    backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                        ? NetworkImage(avatarUrl)
-                        : null,
-                    child: (avatarUrl == null || avatarUrl.isEmpty)
-                        ? Icon(
-                            Icons.person_rounded,
-                            color: AppColors.primary,
-                            size: 32,
-                          )
-                        : null,
-                  ),
-                ),
               ),
             ],
           ),
@@ -156,6 +158,8 @@ class HomeHeader extends StatelessWidget {
     );
   }
 
+  // ==================== Helper Functions ====================
+
   Future<Map<String, dynamic>?> _getProfile(SupabaseService service) async {
     final user = service.currentUser;
     if (user == null) return null;
@@ -163,7 +167,19 @@ class HomeHeader extends StatelessWidget {
   }
 
   String _getFirstName(String fullName) {
-    final parts = fullName.split(' ');
-    return parts.isNotEmpty ? parts[0] : 'User';
+    if (fullName.isEmpty) return 'User';
+    final parts = fullName.trim().split(' ');
+    return parts.first;
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  }
+
+  String _getPremiumDate() {
+    return DateFormat("EEEE, dd MMMM").format(DateTime.now());
   }
 }
