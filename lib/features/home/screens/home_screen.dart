@@ -128,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ClipPath(
               clipper: HeaderCurveClipper(),
               child: Container(
-                height: 230, // ব্যানারের মাঝ বরাবর পর্যন্ত কালার থাকবে
+                height: 170, // ব্যানারের মাঝ বরাবর পর্যন্ত কালার থাকবে
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,

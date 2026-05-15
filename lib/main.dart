@@ -21,6 +21,8 @@ import 'features/profile/screens/seller_profile_screen.dart';
 
 import 'features/profile/screens/Dashboard/Sller_Dashboard/post_properties.dart'; 
 
+import 'features/profile/screens/Dashboard/Sller_Dashboard/my_properties.dart'; 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -59,6 +61,7 @@ class EstateXApp extends StatelessWidget {
         
         // Add Property Route
         '/add-property': (context) => const AddPropertyScreen(),
+        '/my-properties': (context) => const MyPropertiesScreen(),
       },
     );
   }

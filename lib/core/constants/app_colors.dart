@@ -27,4 +27,5 @@ class AppColors {
 
   // Extra
   static const Color lightGold = Color(0xFFF5E8C7);
+  static const Color lightLime      = const Color(0xFFFEF788);
 }

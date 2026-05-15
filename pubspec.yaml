@@ -26,8 +26,7 @@ dependencies:
   shimmer: ^3.0.0              # ডেটা লোড হওয়ার সময় Skeleton Loader-এর জন্য
   font_awesome_flutter: ^10.7.0 # সোশ্যাল এবং অন্যান্য আইকনের জন্য
 
-  # --- Media & Files ---
-  image_picker: ^1.0.7         # প্রপার্টি ইমেজ সিলেক্ট করার জন্য
+
   cached_network_image: ^3.3.1 # নেটওয়ার্ক থেকে প্রপার্টি ইমেজ দ্রুত দেখানোর জন্য
 
   # --- Maps & Location (রিয়েল এস্টেটের জন্য মাস্ট) ---
@@ -43,7 +42,10 @@ dependencies:
   flutter_local_notifications: ^17.0.0 # বিড আপডেট বা নতুন প্রপার্টির নোটিফিকেশনের জন্য
 
   # --- Payment (প্রিমিয়াম ফিচারের জন্য) ---
-  flutter_stripe: ^10.1.1      # পেমেন্ট গেটওয়ে ইন্টিগ্রেশনের জন্য (যদি প্রয়োজন হয়)
+  flutter_stripe: ^10.1.1  
+      # পেমেন্ট গেটওয়ে ইন্টিগ্রেশনের জন্য (যদি প্রয়োজন হয়)
+  image_picker: ^1.1.2
+  permission_handler: ^11.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

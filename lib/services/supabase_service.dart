@@ -252,7 +252,7 @@ class SupabaseService {
       // Fallback to SDK
       return await _uploadWithSDK(storagePath, bytes, ext, userId);
     } catch (e) {
-      debugPrint('❌ Upload error: $e');
+      debugPrint('❌ Avatar upload error: $e');
       rethrow;
     }
   }
@@ -282,6 +282,71 @@ class SupabaseService {
       throw Exception('Upload failed: $e');
     }
   }
+
+  // ─────────────────────────────────────────
+  // PROPERTY IMAGES UPLOAD (NEW)
+  // ─────────────────────────────────────────
+
+  /// Multiple images upload for properties
+  Future<List<String>> uploadPropertyImages(
+    String userId,
+    List<Map<String, dynamic>> imageFiles,
+  ) async {
+    List<String> publicUrls = [];
+
+    if (imageFiles.isEmpty) return publicUrls;
+
+    final supabaseUrl = 'https://hxkokgzbeqmfdkzzeuex.supabase.co';
+    final session = _supabase.auth.currentSession;
+    if (session == null) throw Exception('User not authenticated');
+
+    for (int i = 0; i < imageFiles.length; i++) {
+      final img = imageFiles[i];
+      final String originalName = img['name'] ?? 'property_$i.jpg';
+      final Uint8List bytes = img['bytes'] as Uint8List;
+
+      try {
+        final ext = _cleanExt(originalName);
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final String fileName = '${userId}_${timestamp}_$i.$ext';
+        final String path = fileName;
+
+        // Try HTTP Upload first (same as avatar)
+        final uploadUrl = '$supabaseUrl/storage/v1/object/property_images/$path';
+        final uri = Uri.parse(uploadUrl);
+
+        final request = http.MultipartRequest('POST', uri);
+        request.headers['Authorization'] = 'Bearer ${session.accessToken}';
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: fileName,
+            contentType: http.MediaType('image', ext),
+          ),
+        );
+
+        final streamedResponse = await request.send();
+
+        if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
+          final publicUrl = '$supabaseUrl/storage/v1/object/public/property_images/$path';
+          publicUrls.add(publicUrl);
+          debugPrint('✅ Property image uploaded: $publicUrl');
+        } else {
+          throw Exception('HTTP upload failed: ${streamedResponse.statusCode}');
+        }
+      } catch (e) {
+        debugPrint('❌ Property image $i upload failed: $e');
+        // Continue with other images
+      }
+    }
+
+    return publicUrls;
+  }
+
+  // ─────────────────────────────────────────
+  // HELPER METHODS
+  // ─────────────────────────────────────────
 
   String _cleanExt(String fileName) {
     final parts = fileName.split('.');

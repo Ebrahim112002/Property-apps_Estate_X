@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 // ✅ post_properties.dart ফাইলটি ইমপোর্ট করা হলো যেন ডাটা টাইপ বা রেফারেন্স ঠিক থাকে
 import '../Sller_Dashboard/post_properties.dart'; 
-
+import '../Sller_Dashboard/my_properties.dart';
 // ==================== QUICK ACTIONS COMPONENT ====================
 class DashboardQuickActions extends StatelessWidget {
   const DashboardQuickActions({super.key});
