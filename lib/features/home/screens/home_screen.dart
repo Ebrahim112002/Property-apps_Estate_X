@@ -48,6 +48,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) async {
+    if (index == 1) {
+      Navigator.pushNamed(context, '/all-properties');
+      return; // এখানেই শেষ, নিচের setState এ যাবে না
+    }
     if (index == 3) {
       final user = _supabaseService.currentUser;
       if (user == null) {

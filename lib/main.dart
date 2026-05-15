@@ -9,6 +9,8 @@ import 'features/auth/screens/register_screen.dart';
 
 // Home & Bottom Nav
 import 'features/home/screens/home_screen.dart';
+// all properties
+import 'features/home/ALl _properties/all_properties_view.dart';
 
 // Seller Dashboard
 import 'features/profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
@@ -62,6 +64,7 @@ class EstateXApp extends StatelessWidget {
         // Add Property Route
         '/add-property': (context) => const AddPropertyScreen(),
         '/my-properties': (context) => const MyPropertiesScreen(),
+        '/all-properties': (context) => const AllPropertiesView(),
       },
     );
   }
