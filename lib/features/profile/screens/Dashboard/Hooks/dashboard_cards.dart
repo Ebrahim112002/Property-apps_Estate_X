@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 // ✅ post_properties.dart ফাইলটি ইমপোর্ট করা হলো যেন ডাটা টাইপ বা রেফারেন্স ঠিক থাকে
-import '../Sller_Dashboard/post_properties.dart'; 
+import '../Sller_Dashboard/post_properties.dart';
 import '../Sller_Dashboard/my_properties.dart';
+
 // ==================== QUICK ACTIONS COMPONENT ====================
 class DashboardQuickActions extends StatelessWidget {
   const DashboardQuickActions({super.key});
@@ -9,12 +10,13 @@ class DashboardQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.count(
-      crossAxisCount: 2,          // প্রতি লাইনে ২টি করে বাটন থাকবে
-      shrinkWrap: true,           // কলামের ভেতরে জায়গা ঠিক রাখার জন্য
-      physics: const NeverScrollableScrollPhysics(), // স্ক্রোলিং বন্ধ রাখার জন্য
-      crossAxisSpacing: 14,       // পাশাপাশি বাটনের দূরত্ব
-      mainAxisSpacing: 14,        // উপর-নিচের বাটনের দূরত্ব
-      childAspectRatio: 1.6,      // বাটনগুলোর সাইজ বা অনুপাত
+      crossAxisCount: 2, // প্রতি লাইনে ২টি করে বাটন থাকবে
+      shrinkWrap: true, // কলামের ভেতরে জায়গা ঠিক রাখার জন্য
+      physics:
+          const NeverScrollableScrollPhysics(), // স্ক্রোলিং বন্ধ রাখার জন্য
+      crossAxisSpacing: 14, // পাশাপাশি বাটনের দূরত্ব
+      mainAxisSpacing: 14, // উপর-নিচের বাটনের দূরত্ব
+      childAspectRatio: 1.6, // বাটনগুলোর সাইজ বা অনুপাত
       children: [
         // ১. Add Property বাটন (ক্লিক করলে সাধারণ প্রোপার্টি ফর্মে নিয়ে যাবে)
         _buildActionButton(
@@ -23,22 +25,22 @@ class DashboardQuickActions extends StatelessWidget {
           color: Colors.deepPurple,
           onTap: () {
             Navigator.pushNamed(
-              context, 
+              context,
               '/add-property',
               arguments: 'Normal', // সাধারণ লিস্টিং আইডেন্টিফায়ার
             );
           },
         ),
-        
+
         // ২. Add Auction Property বাটন (ক্লিক করলে এটিও একই ফাইলে যাবে কিন্তু 'Auction' টাইপ নিয়ে)
         _buildActionButton(
-          icon: Icons.gavel_outlined, 
+          icon: Icons.gavel_outlined,
           label: "Add Auction properties",
-          color: Colors.orange,       
+          color: Colors.orange,
           onTap: () {
             Navigator.pushNamed(
-              context, 
-              '/add-property', // আপনার main.dart এর রাউট
+              context,
+              '/add-bid-properties', // আপনার main.dart এর রাউট
               arguments: 'Auction', // অকশন আইডেন্টিফায়ার
             );
           },
@@ -54,10 +56,10 @@ class DashboardQuickActions extends StatelessWidget {
 
         // ৪. Bids & Offers বাটন
         _buildActionButton(
-          icon: Icons.local_offer_outlined, 
-          label: "Bids & Offers",
-          color: Colors.teal,               
-          onTap: () => Navigator.pushNamed(context, '/bids-offers'), 
+          icon: Icons.local_offer_outlined,
+          label: "Your Bids Properties",
+          color: Colors.teal,
+          onTap: () => Navigator.pushNamed(context, '/bid-properties'),
         ),
       ],
     );
@@ -86,7 +88,7 @@ class DashboardQuickActions extends StatelessWidget {
           ],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, 
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: color, size: 32),
             const SizedBox(height: 8),

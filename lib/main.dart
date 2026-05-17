@@ -14,6 +14,9 @@ import 'features/home/ALl _properties/all_properties_view.dart';
 
 // Seller Dashboard
 import 'features/profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
+// post bids
+import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/Bids_post.dart';
+import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
 
 // Profile Screens
 import 'features/profile/screens/profile_screen.dart';
@@ -65,6 +68,9 @@ class EstateXApp extends StatelessWidget {
         '/add-property': (context) => const AddPropertyScreen(),
         '/my-properties': (context) => const MyPropertiesScreen(),
         '/all-properties': (context) => const AllPropertiesView(),
+        '/add-bid-properties': (context) => const PostBidPropertyScreen(),
+        '/my-bid-properties': (context) => const MyBidPropertiesScreen(),
+        
       },
     );
   }

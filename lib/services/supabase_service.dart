@@ -85,9 +85,7 @@ class SupabaseService {
   Future<List<Property>> fetchProperties() async {
     try {
       final response = await _supabase.from('properties').select();
-      return (response as List)
-          .map((json) => Property.fromJson(json))
-          .toList();
+      return (response as List).map((json) => Property.fromJson(json)).toList();
     } catch (e) {
       debugPrint('Fetch properties error: $e');
       return [];
@@ -158,15 +156,11 @@ class SupabaseService {
   // PROFILE — UPDATE
   // ─────────────────────────────────────────
 
-  Future<void> updateProfile(
-      String userId, Map<String, dynamic> data) async {
+  Future<void> updateProfile(String userId, Map<String, dynamic> data) async {
     try {
       await _supabase
           .from('profiles')
-          .update({
-            ...data,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
+          .update({...data, 'updated_at': DateTime.now().toIso8601String()})
           .eq('id', userId);
     } catch (e) {
       throw Exception('Failed to update profile: $e');
@@ -241,8 +235,10 @@ class SupabaseService {
 
         final streamedResponse = await request.send();
 
-        if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
-          final publicUrl = '$supabaseUrl/storage/v1/object/public/avatars/$storagePath';
+        if (streamedResponse.statusCode == 200 ||
+            streamedResponse.statusCode == 201) {
+          final publicUrl =
+              '$supabaseUrl/storage/v1/object/public/avatars/$storagePath';
           await updateProfile(userId, {'avatar_url': publicUrl});
           debugPrint('✅ Avatar uploaded: $publicUrl');
           return publicUrl;
@@ -266,14 +262,17 @@ class SupabaseService {
     try {
       final mimeType = _getMimeType(ext);
 
-      await _supabase.storage.from('avatars').uploadBinary(
+      await _supabase.storage
+          .from('avatars')
+          .uploadBinary(
             storagePath,
             bytes,
             fileOptions: FileOptions(contentType: mimeType, upsert: true),
           );
 
       final supabaseUrl = 'https://hxkokgzbeqmfdkzzeuex.supabase.co';
-      final publicUrl = '$supabaseUrl/storage/v1/object/public/avatars/$storagePath';
+      final publicUrl =
+          '$supabaseUrl/storage/v1/object/public/avatars/$storagePath';
 
       await updateProfile(userId, {'avatar_url': publicUrl});
       return publicUrl;
@@ -312,7 +311,8 @@ class SupabaseService {
         final String path = fileName;
 
         // Try HTTP Upload first (same as avatar)
-        final uploadUrl = '$supabaseUrl/storage/v1/object/property_images/$path';
+        final uploadUrl =
+            '$supabaseUrl/storage/v1/object/property_images/$path';
         final uri = Uri.parse(uploadUrl);
 
         final request = http.MultipartRequest('POST', uri);
@@ -328,8 +328,10 @@ class SupabaseService {
 
         final streamedResponse = await request.send();
 
-        if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
-          final publicUrl = '$supabaseUrl/storage/v1/object/public/property_images/$path';
+        if (streamedResponse.statusCode == 200 ||
+            streamedResponse.statusCode == 201) {
+          final publicUrl =
+              '$supabaseUrl/storage/v1/object/public/property_images/$path';
           publicUrls.add(publicUrl);
           debugPrint('✅ Property image uploaded: $publicUrl');
         } else {
@@ -342,6 +344,116 @@ class SupabaseService {
     }
 
     return publicUrls;
+  }
+  // ─────────────────────────────────────────
+  // BID PROPERTIES
+  // ─────────────────────────────────────────
+
+  Future<List<String>> uploadBidPropertyImages(
+    String userId,
+    List<Map<String, dynamic>> imageFiles,
+  ) async {
+    List<String> publicUrls = [];
+
+    if (imageFiles.isEmpty) return publicUrls;
+
+    final session = _supabase.auth.currentSession;
+    if (session == null) throw Exception('User not authenticated');
+
+    final supabaseUrl = 'https://hxkokgzbeqmfdkzzeuex.supabase.co';
+
+    for (int i = 0; i < imageFiles.length; i++) {
+      final img = imageFiles[i];
+      final String originalName = img['name'] ?? 'bid_$i.jpg';
+      final Uint8List bytes = img['bytes'] as Uint8List;
+
+      try {
+        final ext = _cleanExt(originalName);
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final String fileName = '${userId}_${timestamp}_$i.$ext';
+
+        final uploadUrl =
+            '$supabaseUrl/storage/v1/object/bid_properties/$fileName';
+        final uri = Uri.parse(uploadUrl);
+
+        final request = http.MultipartRequest('POST', uri);
+        request.headers['Authorization'] = 'Bearer ${session.accessToken}';
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: fileName,
+            contentType: http.MediaType('image', ext),
+          ),
+        );
+
+        final streamedResponse = await request.send();
+
+        if (streamedResponse.statusCode == 200 ||
+            streamedResponse.statusCode == 201) {
+          final publicUrl =
+              '$supabaseUrl/storage/v1/object/public/bid_properties/$fileName';
+          publicUrls.add(publicUrl);
+          debugPrint('✅ Bid image $i uploaded successfully');
+        } else {
+          debugPrint('❌ Upload failed: ${streamedResponse.statusCode}');
+        }
+      } catch (e) {
+        debugPrint('❌ Image $i upload error: $e');
+      }
+    }
+    return publicUrls;
+  }
+
+  // Create Bid Property
+  Future<bool> createBidProperty({
+    required String title,
+    required String location,
+    String? description,
+    required double basePrice,
+    required double area,
+    required String propertyType,
+    int? bedrooms,
+    int? bathrooms,
+    double? plotSize,
+    int? parkingSpaces,
+    required List<Map<String, dynamic>> imageFiles,
+    required DateTime endTime,
+  }) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      final imageUrls = await uploadBidPropertyImages(user.id, imageFiles);
+
+      final data = {
+        'seller_id': user.id,
+        'title': title,
+        'location': location,
+        'description': description,
+        'base_price': basePrice,
+        'current_highest_bid': basePrice,
+        'highest_bidder_id': null,
+        'area': area,
+        'property_type': propertyType,
+        'bedrooms': bedrooms,
+        'bathrooms': bathrooms,
+        'plot_size': plotSize,
+        'parking_spaces': parkingSpaces,
+        'image_urls': imageUrls,
+        'end_time': endTime.toIso8601String(),
+        'is_active': true,
+        'is_verified': false,
+      };
+
+      await _supabase.from('bid_properties').insert(data);
+
+      debugPrint('✅ Bid Property Created Successfully');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Create Bid Property Error: $e');
+      rethrow;
+    }
   }
 
   // ─────────────────────────────────────────
@@ -369,6 +481,54 @@ class SupabaseService {
         return 'image/gif';
       default:
         return 'image/jpeg';
+    }
+  }
+
+  // ===================== MY BID PROPERTIES =====================
+
+  Future<List<dynamic>> fetchMyBidProperties() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return [];
+
+      final response = await _supabase
+          .from('bid_properties')
+          .select()
+          .eq('seller_id', user.id)
+          .order('created_at', ascending: false);
+
+      return response;
+    } catch (e) {
+      debugPrint('❌ Fetch My Bid Properties Error: $e');
+      return [];
+    }
+  }
+
+  Future<bool> updateBidProperty({
+    required String id,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      await _supabase
+          .from('bid_properties')
+          .update({...data, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', id);
+      debugPrint('✅ Bid Property Updated');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Update Bid Property Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> deleteBidProperty(String id) async {
+    try {
+      await _supabase.from('bid_properties').delete().eq('id', id);
+      debugPrint('✅ Bid Property Deleted');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Delete Bid Property Error: $e');
+      rethrow;
     }
   }
 }
