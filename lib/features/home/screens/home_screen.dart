@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
         onAuctionTapped: () {
-          Navigator.pushNamed(context, '/auction-screen');
+          Navigator.pushNamed(context, '/all-bid-properties');
         },
       ),
     );

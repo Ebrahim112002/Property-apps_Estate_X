@@ -11,6 +11,7 @@ import 'features/auth/screens/register_screen.dart';
 import 'features/home/screens/home_screen.dart';
 // all properties
 import 'features/home/ALl _properties/all_properties_view.dart';
+import 'features/home/ALl _properties/Bid_properties/all_bid_properties.dart';
 
 // Seller Dashboard
 import 'features/profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
@@ -68,6 +69,7 @@ class EstateXApp extends StatelessWidget {
         '/add-property': (context) => const AddPropertyScreen(),
         '/my-properties': (context) => const MyPropertiesScreen(),
         '/all-properties': (context) => const AllPropertiesView(),
+        '/all-bid-properties': (context) => const AllBidPropertiesScreen(),
         '/add-bid-properties': (context) => const PostBidPropertyScreen(),
         '/my-bid-properties': (context) => const MyBidPropertiesScreen(),
         

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../../services/supabase_service.dart';
-import 'Bids_post.dart'; 
+import 'Bids_post.dart';
+import 'EditBidPropertyScreen.dart';
 
 class MyBidPropertiesScreen extends StatefulWidget {
   static const String routeName = '/my-bid-properties';
@@ -29,9 +29,9 @@ class _MyBidPropertiesScreenState extends State<MyBidPropertiesScreen> {
       final data = await _supabaseService.fetchMyBidProperties();
       setState(() => _myBids = data);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -42,9 +42,14 @@ class _MyBidPropertiesScreenState extends State<MyBidPropertiesScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Auction?"),
-        content: Text("Are you sure you want to delete '$title'?"),
+        content: Text(
+          "Are you sure you want to delete '$title'? This action cannot be undone.",
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text("Delete", style: TextStyle(color: Colors.red)),
@@ -57,11 +62,24 @@ class _MyBidPropertiesScreenState extends State<MyBidPropertiesScreen> {
       try {
         await _supabaseService.deleteBidProperty(id);
         _fetchMyBids();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Auction Deleted')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Auction Deleted Successfully')),
+        );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
       }
     }
+  }
+
+  void _editBid(dynamic bid) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => EditBidPropertyScreen(bid: bid)),
+    ).then((value) {
+      if (value == true) _fetchMyBids(); // Refresh after edit
+    });
   }
 
   @override
@@ -75,82 +93,236 @@ class _MyBidPropertiesScreenState extends State<MyBidPropertiesScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _myBids.isEmpty
-              ? const Center(child: Text("You haven't posted any auction yet"))
-              : RefreshIndicator(
-                  onRefresh: _fetchMyBids,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _myBids.length,
-                    itemBuilder: (context, index) {
-                      final bid = _myBids[index];
-                      final imageUrl = (bid['image_urls'] as List?)?.isNotEmpty == true
-                          ? bid['image_urls'][0]
-                          : null;
+          ? const Center(
+              child: Text(
+                "You haven't posted any auction yet",
+                style: TextStyle(fontSize: 16),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _fetchMyBids,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: _myBids.length,
+                itemBuilder: (context, index) {
+                  final bid = _myBids[index];
+                  final List<dynamic> images = bid['image_urls'] ?? [];
+                  final bool isActive = bid['is_active'] ?? true;
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (imageUrl != null)
-                              ClipRRect(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                child: Image.network(imageUrl, height: 180, width: double.infinity, fit: BoxFit.cover),
-                              ),
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(bid['title'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 4),
-                                  Text(bid['location'], style: const TextStyle(color: Colors.grey)),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Text("Base: ৳${bid['base_price']}", style: const TextStyle(fontWeight: FontWeight.w600)),
-                                      const Spacer(),
-                                      Text("Current: ৳${bid['current_highest_bid']}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                                    ],
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Multiple Images with Scroll
+                        if (images.isNotEmpty)
+                          SizedBox(
+                            height: 200,
+                            child: Stack(
+                              children: [
+                                PageView.builder(
+                                  itemCount: images.length,
+                                  itemBuilder: (context, imgIndex) {
+                                    return ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(16),
+                                      ),
+                                      child: Image.network(
+                                        images[imgIndex],
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                      ),
+                                    );
+                                  },
+                                ),
+                                if (images.length > 1)
+                                  Positioned(
+                                    bottom: 8,
+                                    left: 0,
+                                    right: 0,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: List.generate(images.length, (
+                                        i,
+                                      ) {
+                                        return Container(
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 3,
+                                          ),
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.white.withOpacity(
+                                              0.8,
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ),
                                   ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          icon: const Icon(Icons.edit),
-                                          label: const Text("Edit"),
-                                          onPressed: () {
-                                            // Edit Logic - পরে করবো
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text("Edit feature coming soon...")),
-                                            );
-                                          },
-                                        ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(16),
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 60,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+
+                        Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      bid['title'],
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          label: const Text("Delete", style: TextStyle(color: Colors.red)),
-                                          onPressed: () => _deleteBid(bid['id'], bid['title']),
-                                        ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isActive
+                                          ? Colors.green
+                                          : Colors.red,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      isActive ? "Active" : "Ended",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 6),
+                              Text(
+                                bid['location'],
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Details
+                              Row(
+                                children: [
+                                  Text(
+                                    "Base: ৳${bid['base_price']}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    "Current: ৳${bid['current_highest_bid']}",
+                                    style: const TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              if (bid['bedrooms'] != null ||
+                                  bid['bathrooms'] != null)
+                                Text(
+                                  "🛏 ${bid['bedrooms'] ?? 0} Bed | 🛁 ${bid['bathrooms'] ?? 0} Bath",
+                                ),
+
+                              if (bid['plot_size'] != null)
+                                Text("📐 Plot: ${bid['plot_size']} Katha"),
+
+                              if (bid['parking_spaces'] != null)
+                                Text("🅿 Parking: ${bid['parking_spaces']}"),
+
+                              const SizedBox(height: 4),
+                              Text(
+                                "Ends: ${DateTime.parse(bid['end_time']).toString().substring(0, 16)}",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.orange,
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Action Buttons
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.edit, size: 20),
+                                      label: const Text("Edit"),
+                                      onPressed: () => _editBid(bid),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
+                                      label: const Text(
+                                        "Delete",
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                      onPressed: () =>
+                                          _deleteBid(bid['id'], bid['title']),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.pushNamed(context, PostBidPropertyScreen.routeName),
-        child: const Icon(Icons.add),
+        backgroundColor: Colors.black,
+        onPressed: () =>
+            Navigator.pushNamed(context, PostBidPropertyScreen.routeName),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

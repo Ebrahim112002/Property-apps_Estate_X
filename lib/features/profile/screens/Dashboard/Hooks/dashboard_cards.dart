@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-// ✅ post_properties.dart ফাইলটি ইমপোর্ট করা হলো যেন ডাটা টাইপ বা রেফারেন্স ঠিক থাকে
-import '../Sller_Dashboard/post_properties.dart';
-import '../Sller_Dashboard/my_properties.dart';
 
 // ==================== QUICK ACTIONS COMPONENT ====================
 class DashboardQuickActions extends StatelessWidget {
@@ -59,7 +56,7 @@ class DashboardQuickActions extends StatelessWidget {
           icon: Icons.local_offer_outlined,
           label: "Your Bids Properties",
           color: Colors.teal,
-          onTap: () => Navigator.pushNamed(context, '/bid-properties'),
+          onTap: () => Navigator.pushNamed(context, '/my-bid-properties'),
         ),
       ],
     );

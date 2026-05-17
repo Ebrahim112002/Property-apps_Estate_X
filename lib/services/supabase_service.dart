@@ -531,4 +531,44 @@ class SupabaseService {
       rethrow;
     }
   }
+
+  Future<List<dynamic>> fetchActiveBidProperties() async {
+    try {
+      final response = await _supabase
+          .from('bid_properties')
+          .select()
+          .eq('is_active', true)
+          .order('created_at', ascending: false);
+
+      return response;
+    } catch (e) {
+      debugPrint('❌ Fetch Active Bid Properties Error: $e');
+      return [];
+    }
+  }
+
+  Future<bool> placeBid({
+    required String bidPropertyId,
+    required double bidAmount,
+  }) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      await _supabase
+          .from('bid_properties')
+          .update({
+            'current_highest_bid': bidAmount,
+            'highest_bidder_id': user.id,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', bidPropertyId);
+
+      debugPrint('✅ Bid placed: $bidAmount on $bidPropertyId by ${user.id}');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Place Bid Error: $e');
+      rethrow;
+    }
+  }
 }

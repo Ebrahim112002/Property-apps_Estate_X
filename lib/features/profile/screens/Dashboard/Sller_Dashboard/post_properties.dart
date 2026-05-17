@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -50,7 +49,9 @@ class PostPropertyService {
         'seller_id': user.id,
         'title': title,
         'location': location,
-        'description': description?.trim().isEmpty == true ? null : description?.trim(),
+        'description': description?.trim().isEmpty == true
+            ? null
+            : description?.trim(),
         'price': price,
         'area': area,
         'property_type': propertyType,
@@ -132,9 +133,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       setState(() => _selectedImageFiles.addAll(newImages));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ইমেজ সিলেক্ট করতে সমস্যা: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('ইমেজ সিলেক্ট করতে সমস্যা: $e')));
       }
     }
   }
@@ -157,7 +158,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
       if (price == null || area == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Price এবং Area সঠিক সংখ্যায় দিন'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Price এবং Area সঠিক সংখ্যায় দিন'),
+            backgroundColor: Colors.red,
+          ),
         );
         return;
       }
@@ -193,14 +197,20 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🎉 প্রোপার্টি সফলভাবে পোস্ট হয়েছে!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('🎉 প্রোপার্টি সফলভাবে পোস্ট হয়েছে!'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Error: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('❌ Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -210,13 +220,20 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String incomingActionType = ModalRoute.of(context)?.settings.arguments as String? ?? 'Normal';
-    final String finalListingType = incomingActionType == 'Auction' ? 'Auction' : _selectedListingType;
+    final String incomingActionType =
+        ModalRoute.of(context)?.settings.arguments as String? ?? 'Normal';
+    final String finalListingType = incomingActionType == 'Auction'
+        ? 'Auction'
+        : _selectedListingType;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: Text(incomingActionType == 'Auction' ? "Add Auction Property" : "Add New Property"),
+        title: Text(
+          incomingActionType == 'Auction'
+              ? "Add Auction Property"
+              : "Add New Property",
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0.5,
@@ -232,7 +249,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                   children: [
                     TextFormField(
                       controller: _titleController,
-                      decoration: const InputDecoration(labelText: 'Property Title *', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Property Title *',
+                        border: OutlineInputBorder(),
+                      ),
                       validator: (v) => v!.isEmpty ? 'Title required' : null,
                     ),
                     const SizedBox(height: 16),
@@ -250,25 +270,44 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
                     TextFormField(
                       controller: _locationController,
-                      decoration: const InputDecoration(labelText: 'Location *', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Location *',
+                        border: OutlineInputBorder(),
+                      ),
                       validator: (v) => v!.isEmpty ? 'Location required' : null,
                     ),
                     const SizedBox(height: 16),
 
                     DropdownButtonFormField<String>(
                       value: _selectedPropertyType,
-                      decoration: const InputDecoration(labelText: 'Property Type', border: OutlineInputBorder()),
-                      items: ['Flat', 'Land', 'Commercial'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                      onChanged: (val) => setState(() => _selectedPropertyType = val!),
+                      decoration: const InputDecoration(
+                        labelText: 'Property Type',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: ['Flat', 'Land', 'Commercial']
+                          .map(
+                            (e) => DropdownMenuItem(value: e, child: Text(e)),
+                          )
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedPropertyType = val!),
                     ),
                     const SizedBox(height: 20),
 
                     if (incomingActionType != 'Auction')
                       DropdownButtonFormField<String>(
                         value: _selectedListingType,
-                        decoration: const InputDecoration(labelText: 'Listing Type', border: OutlineInputBorder()),
-                        items: ['Rent', 'Sale'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                        onChanged: (val) => setState(() => _selectedListingType = val!),
+                        decoration: const InputDecoration(
+                          labelText: 'Listing Type',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: ['Rent', 'Sale']
+                            .map(
+                              (e) => DropdownMenuItem(value: e, child: Text(e)),
+                            )
+                            .toList(),
+                        onChanged: (val) =>
+                            setState(() => _selectedListingType = val!),
                       ),
                     const SizedBox(height: 16),
 
@@ -279,10 +318,13 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                             controller: _priceController,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                              labelText: incomingActionType == 'Auction' ? 'Base Price (৳)' : 'Price (৳) *',
+                              labelText: incomingActionType == 'Auction'
+                                  ? 'Base Price (৳)'
+                                  : 'Price (৳) *',
                               border: const OutlineInputBorder(),
                             ),
-                            validator: (v) => v!.isEmpty ? 'Price required' : null,
+                            validator: (v) =>
+                                v!.isEmpty ? 'Price required' : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -290,8 +332,12 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                           child: TextFormField(
                             controller: _areaController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Area (Sq Ft) *', border: OutlineInputBorder()),
-                            validator: (v) => v!.isEmpty ? 'Area required' : null,
+                            decoration: const InputDecoration(
+                              labelText: 'Area (Sq Ft) *',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) =>
+                                v!.isEmpty ? 'Area required' : null,
                           ),
                         ),
                       ],
@@ -306,7 +352,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                             child: TextFormField(
                               controller: _bedroomsController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Bedrooms', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                labelText: 'Bedrooms',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -314,7 +363,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                             child: TextFormField(
                               controller: _bathroomsController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Bathrooms', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                labelText: 'Bathrooms',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ),
                         ],
@@ -323,13 +375,19 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                       TextFormField(
                         controller: _plotSizeController,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Plot Size (Katha / Decimal)', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                          labelText: 'Plot Size (Katha / Decimal)',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ] else if (_selectedPropertyType == 'Commercial') ...[
                       TextFormField(
                         controller: _parkingController,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Parking Spaces', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                          labelText: 'Parking Spaces',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ],
 
@@ -345,7 +403,11 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                       ),
                       child: Column(
                         children: [
-                          const Icon(Icons.image_outlined, size: 40, color: Colors.grey),
+                          const Icon(
+                            Icons.image_outlined,
+                            size: 40,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(height: 8),
                           TextButton.icon(
                             icon: const Icon(Icons.upload_rounded),
@@ -366,14 +428,26 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                                       height: 70,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(8),
-                                        image: DecorationImage(image: MemoryImage(image['bytes']), fit: BoxFit.cover),
+                                        image: DecorationImage(
+                                          image: MemoryImage(image['bytes']),
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                     ),
                                     GestureDetector(
-                                      onTap: () => setState(() => _selectedImageFiles.remove(image)),
+                                      onTap: () => setState(
+                                        () => _selectedImageFiles.remove(image),
+                                      ),
                                       child: Container(
-                                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                                        child: const Icon(Icons.close, size: 18, color: Colors.red),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 18,
+                                          color: Colors.red,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -393,12 +467,21 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        onPressed: _isLoading ? null : () => _submitProperty(finalListingType),
+                        onPressed: _isLoading
+                            ? null
+                            : () => _submitProperty(finalListingType),
                         child: Text(
-                          incomingActionType == 'Auction' ? "Launch Auction" : "Post Property",
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          incomingActionType == 'Auction'
+                              ? "Launch Auction"
+                              : "Post Property",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
