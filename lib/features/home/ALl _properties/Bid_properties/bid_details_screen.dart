@@ -14,7 +14,7 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
   final _supabaseService = SupabaseService();
   final _bidAmountController = TextEditingController();
   bool _isLoading = false;
-  int _currentIndex = 0;   // <-- Added for image control
+  int _currentIndex = 0; // <-- Added for image control
 
   Future<void> _placeBid() async {
     final bidAmount = double.tryParse(_bidAmountController.text.trim());
@@ -93,14 +93,21 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                         )
                       : Container(
                           color: Colors.grey[300],
-                          child: const Icon(Icons.image, size: 100, color: Colors.grey),
+                          child: const Icon(
+                            Icons.image,
+                            size: 100,
+                            color: Colors.grey,
+                          ),
                         ),
                 ),
 
                 // Thumbnail Images
                 if (images.length > 1)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
                     child: SizedBox(
                       height: 85,
                       child: ListView.builder(
@@ -184,7 +191,10 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         bid['location'],
-                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
                       ),
 
                       const SizedBox(height: 24),
@@ -202,7 +212,10 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                           children: [
                             const Text(
                               "CURRENT HIGHEST BID",
-                              style: TextStyle(fontSize: 14, color: Colors.black54),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black54,
+                              ),
                             ),
                             Text(
                               "৳ ${bid['current_highest_bid']}",
@@ -230,7 +243,10 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                       // Property Details
                       const Text(
                         "Property Details",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       _detailRow("Property Type", bid['property_type']),
@@ -241,7 +257,10 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                       if (bid['plot_size'] != null)
                         _detailRow("Plot Size", "${bid['plot_size']} Katha"),
                       if (bid['parking_spaces'] != null)
-                        _detailRow("Parking", "${bid['parking_spaces']} Spaces"),
+                        _detailRow(
+                          "Parking",
+                          "${bid['parking_spaces']} Spaces",
+                        ),
                       const SizedBox(height: 24),
 
                       // Description
@@ -298,7 +317,9 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                             ),
                             onPressed: _isLoading ? null : _placeBid,
                             child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
                                 : const Text(
                                     "PLACE BID NOW",
                                     style: TextStyle(
@@ -352,6 +373,6 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
           ),
         ],
       ),
-    );
+    ); //comment
   }
 }
