@@ -571,4 +571,90 @@ class SupabaseService {
       rethrow;
     }
   }
+
+  // ─────────────────────────────────────────
+  // FAVORITES
+  // ─────────────────────────────────────────
+
+  /// Add Property to Favorite
+  Future<bool> addToFavorite(String propertyId) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      await _supabase.from('favorites').insert({
+        'user_id': user.id,
+        'property_id': propertyId,
+      });
+
+      debugPrint('✅ Added to favorite: $propertyId');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Add to favorite error: $e');
+      return false;
+    }
+  }
+
+  /// Remove Property from Favorite
+  Future<bool> removeFromFavorite(String propertyId) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      await _supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('property_id', propertyId);
+
+      debugPrint('✅ Removed from favorite: $propertyId');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Remove from favorite error: $e');
+      return false;
+    }
+  }
+
+  /// Check if Property is already in Favorite
+  Future<bool> isFavorite(String propertyId) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return false;
+
+      final response = await _supabase
+          .from('favorites')
+          .select()
+          .eq('user_id', user.id)
+          .eq('property_id', propertyId)
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      debugPrint('❌ Check favorite error: $e');
+      return false;
+    }
+  }
+
+  /// Get All Favorite Properties of Current User
+  Future<List<Property>> getFavoriteProperties() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return [];
+
+      final response = await _supabase
+          .from('favorites')
+          .select('*, properties(*)')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      final List favorites = response as List;
+
+      return favorites.map((fav) {
+        return Property.fromJson(fav['properties'] as Map<String, dynamic>);
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ Fetch favorites error: $e');
+      return [];
+    }
+  }
 }

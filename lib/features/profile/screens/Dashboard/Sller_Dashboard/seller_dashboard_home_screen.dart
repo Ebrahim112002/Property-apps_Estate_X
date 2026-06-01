@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../Hooks/Header.dart';
-import '../Hooks/dashboard_cards.dart'; 
+import '../Hooks/dashboard_cards.dart';
 
 class SellerDashboardHomeScreen extends StatefulWidget {
   const SellerDashboardHomeScreen({super.key});
@@ -38,7 +38,12 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ==================== HEADER ====================
-                SellerDashboardHeader(key: headerKey),
+                DashboardHeader(
+                  key: headerKey,
+                  title: 'Seller Dashboard',
+                  role: 'Seller',
+                  profileRoute: '/seller-profile',
+                ),
                 const SizedBox(height: 24),
 
                 // ==================== QUICK ACTIONS (এখন উপরে) ====================
@@ -55,7 +60,7 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                   totalProperties: totalProperties,
                   activeListings: activeListings,
                   totalBids: totalBids,
-                  totalInterested: totalInterested,
+                  totalFavorites: totalInterested,
                 ),
                 const SizedBox(height: 28),
 

@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../../../../services/supabase_service.dart';
 
-class SellerDashboardHeader extends StatefulWidget {
-  const SellerDashboardHeader({super.key});
+class DashboardHeader extends StatefulWidget {
+  final String title;
+  final String role; // 'Buyer' or 'Seller'
+  final String? welcomeText;
+  final String profileRoute;
+
+  const DashboardHeader({
+    super.key,
+    required this.title,
+    required this.role,
+    this.welcomeText,
+    required this.profileRoute,
+  });
 
   @override
-  State<SellerDashboardHeader> createState() => _SellerDashboardHeaderState();
+  State<DashboardHeader> createState() => _DashboardHeaderState();
 }
 
-class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
+class _DashboardHeaderState extends State<DashboardHeader> {
   final SupabaseService _supabaseService = SupabaseService();
   late Future<Map<String, dynamic>?> _profileFuture;
 
@@ -26,7 +37,7 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
 
   String _getFirstName(String fullName) {
     final parts = fullName.split(' ');
-    return parts.isNotEmpty ? parts[0] : 'Seller';
+    return parts.isNotEmpty ? parts[0] : widget.role;
   }
 
   @override
@@ -36,17 +47,15 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
       builder: (context, snapshot) {
         final profile = snapshot.data;
         final avatarUrl = profile?['avatar_url'] as String?;
-        final fullName = profile?['full_name'] ?? 'Seller';
+        final fullName = profile?['full_name'] ?? widget.role;
         final firstName = _getFirstName(fullName);
 
         return Stack(
           children: [
-            // ১. ওভারঅল ফুল ব্যাকগ্রাউন্ড গ্রাডিয়েন্ট ও ওয়েভ ইফেক্ট (হাইট কমানো হয়েছে)
             ClipPath(
               clipper: DashboardHeaderClipper(),
               child: Container(
-                height:
-                    220, // আপনার চাহিদা অনুযায়ী ব্যাকগ্রাউন্ড সাইজ ছোট করা হলো
+                height: 220,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -62,7 +71,6 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
               ),
             ),
 
-            // ২. মেইন কন্টেন্ট লেয়ার
             SafeArea(
               bottom: false,
               child: Padding(
@@ -73,11 +81,11 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Top App Bar Area (Back Button + Title + Profile)
+                    // Top Bar
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // বাম পাশে: ব্যাক বাটন ও টেক্সট
+                        // Back Button
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
@@ -96,11 +104,8 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.arrow_back_ios_new_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
+                                  Icon(Icons.arrow_back_ios_new_rounded,
+                                      color: Colors.white, size: 16),
                                   SizedBox(width: 6),
                                   Text(
                                     "Back",
@@ -116,13 +121,13 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                           ),
                         ),
 
-                        // মাঝখানে: টাইটেল সেন্টারিং (সাইজ বড় করা হয়েছে)
-                        const Expanded(
+                        // Title
+                        Expanded(
                           child: Center(
                             child: Text(
-                              "Seller Dashboard",
-                              style: TextStyle(
-                                fontSize: 22, // সাইজ বড় করা হয়েছে
+                              widget.title,
+                              style: const TextStyle(
+                                fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
@@ -130,10 +135,10 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                           ),
                         ),
 
-                        // ডানপাশে: প্রোফাইল অ্যাভাটার ও নাম (সাইজ বড় ও নরমাল করা হয়েছে)
+                        // Profile
                         GestureDetector(
                           onTap: () =>
-                              Navigator.pushNamed(context, '/seller-profile'),
+                              Navigator.pushNamed(context, widget.profileRoute),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -141,9 +146,8 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Colors.black.withOpacity(0.2),
-                                    width: 2,
-                                  ),
+                                      color: Colors.black.withOpacity(0.2),
+                                      width: 2),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.15),
@@ -153,26 +157,20 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                                   ],
                                 ),
                                 child: CircleAvatar(
-                                  radius: 22, // অ্যাভাটার বড় করা হয়েছে
+                                  radius: 22,
                                   backgroundColor: Colors.white,
-                                  backgroundImage:
-                                      (avatarUrl != null &&
+                                  backgroundImage: (avatarUrl != null &&
                                           avatarUrl.isNotEmpty)
                                       ? NetworkImage(avatarUrl)
                                       : null,
-                                  child:
-                                      (avatarUrl == null || avatarUrl.isEmpty)
-                                      ? const Icon(
-                                          Icons.person_rounded,
-                                          color: Color(0xFF203A43),
-                                          size: 24,
-                                        )
+                                  child: (avatarUrl == null ||
+                                          avatarUrl.isEmpty)
+                                      ? const Icon(Icons.person_rounded,
+                                          color: Color(0xFF203A43), size: 24)
                                       : null,
                                 ),
                               ),
-                              const SizedBox(
-                                width: 10,
-                              ), // স্পেসিং বাড়ানো হয়েছে যাতে চাপাচাপি না লাগে
+                              const SizedBox(width: 10),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
@@ -180,7 +178,7 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                                   const Text(
                                     "My Profile",
                                     style: TextStyle(
-                                      fontSize: 13, // টেক্সট সাইজ বড় করা হয়েছে
+                                      fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                     ),
@@ -189,7 +187,7 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                                   Text(
                                     firstName,
                                     style: const TextStyle(
-                                      fontSize: 12, // টেক্সট সাইজ বড় করা হয়েছে
+                                      fontSize: 12,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -200,12 +198,12 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                         ),
                       ],
                     ),
-                    const SizedBox(
-                      height: 20,
-                    ), // ব্যাকগ্রাউন্ড ছোট করায় গ্যাপ সামঞ্জস্য করা হয়েছে
-                    // ৩. মাঝখানে এলাইন করা ওয়েলকাম টেক্সট এরিয়া
+
+                    const SizedBox(height: 20),
+
+                    // Welcome Text
                     Text(
-                      "Welcome back, $firstName 👋",
+                      widget.welcomeText ?? "Welcome back, $firstName 👋",
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 24,
@@ -215,10 +213,12 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      "Manage your properties & track performance",
+                    Text(
+                      widget.role == "Seller"
+                          ? "Manage your properties & track performance"
+                          : "Find your dream property & track inquiries",
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         color: Colors.white,
                         fontWeight: FontWeight.w400,
@@ -235,7 +235,7 @@ class _SellerDashboardHeaderState extends State<SellerDashboardHeader> {
   }
 }
 
-// ==================== EXACT MATCH WAVE CLIPPER ====================
+// Clipper (একই রাখা হলো)
 class DashboardHeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {

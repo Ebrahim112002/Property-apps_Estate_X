@@ -7,43 +7,31 @@ class DashboardQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.count(
-      crossAxisCount: 2, // প্রতি লাইনে ২টি করে বাটন থাকবে
-      shrinkWrap: true, // কলামের ভেতরে জায়গা ঠিক রাখার জন্য
-      physics:
-          const NeverScrollableScrollPhysics(), // স্ক্রোলিং বন্ধ রাখার জন্য
-      crossAxisSpacing: 14, // পাশাপাশি বাটনের দূরত্ব
-      mainAxisSpacing: 14, // উপর-নিচের বাটনের দূরত্ব
-      childAspectRatio: 1.6, // বাটনগুলোর সাইজ বা অনুপাত
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 14,
+      mainAxisSpacing: 14,
+      childAspectRatio: 1.6,
       children: [
-        // ১. Add Property বাটন (ক্লিক করলে সাধারণ প্রোপার্টি ফর্মে নিয়ে যাবে)
         _buildActionButton(
           icon: Icons.add_circle_outline,
           label: "Add Property",
           color: Colors.deepPurple,
           onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/add-property',
-              arguments: 'Normal', // সাধারণ লিস্টিং আইডেন্টিফায়ার
-            );
+            Navigator.pushNamed(context, '/add-property', arguments: 'Normal');
           },
         ),
 
-        // ২. Add Auction Property বাটন (ক্লিক করলে এটিও একই ফাইলে যাবে কিন্তু 'Auction' টাইপ নিয়ে)
         _buildActionButton(
           icon: Icons.gavel_outlined,
           label: "Add Auction properties",
           color: Colors.orange,
           onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/add-bid-properties', // আপনার main.dart এর রাউট
-              arguments: 'Auction', // অকশন আইডেন্টিফায়ার
-            );
+            Navigator.pushNamed(context, '/add-bid-properties', arguments: 'Auction');
           },
         ),
 
-        // ৩. My Properties বাটন
         _buildActionButton(
           icon: Icons.list_alt_outlined,
           label: "My Properties",
@@ -51,7 +39,6 @@ class DashboardQuickActions extends StatelessWidget {
           onTap: () => Navigator.pushNamed(context, '/my-properties'),
         ),
 
-        // ৪. Bids & Offers বাটন
         _buildActionButton(
           icon: Icons.local_offer_outlined,
           label: "Your Bids Properties",
@@ -110,14 +97,14 @@ class DashboardStatsGrid extends StatelessWidget {
   final int totalProperties;
   final int activeListings;
   final int totalBids;
-  final int totalInterested;
+  final int totalFavorites;   // ← নতুন: Favorites Count
 
   const DashboardStatsGrid({
     super.key,
     required this.totalProperties,
     required this.activeListings,
     required this.totalBids,
-    required this.totalInterested,
+    required this.totalFavorites,   // ← এখানে পাস করবে
   });
 
   @override
@@ -135,24 +122,30 @@ class DashboardStatsGrid extends StatelessWidget {
           totalProperties.toString(),
           Icons.home_work_outlined,
           Colors.blue,
+          onTap: () {}, // চাইলে পরে নেভিগেশন দিতে পারো
         ),
         _buildStatCard(
           "Active Listings",
           activeListings.toString(),
           Icons.visibility_outlined,
           Colors.green,
+          onTap: () {},
         ),
         _buildStatCard(
           "Total Bids",
           totalBids.toString(),
           Icons.gavel_rounded,
           Colors.orange,
+          onTap: () {},
         ),
         _buildStatCard(
-          "Interested",
-          totalInterested.toString(),
-          Icons.favorite_outline,
+          "Favorites",                    // ← Changed
+          totalFavorites.toString(),      // ← Dynamic
+          Icons.favorite,                 // ← Changed
           Colors.purple,
+          onTap: () {
+            Navigator.pushNamed(context, '/favorites');   // ← Navigate to Favorites Page
+          },
         ),
       ],
     );
@@ -163,34 +156,38 @@ class DashboardStatsGrid extends StatelessWidget {
     String value,
     IconData icon,
     Color color,
+    {required VoidCallback onTap}
   ) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 30),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            title,
-            style: TextStyle(fontSize: 13.5, color: Colors.grey[700]),
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 30),
+            const Spacer(),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              title,
+              style: TextStyle(fontSize: 13.5, color: Colors.grey[700]),
+            ),
+          ],
+        ),
       ),
     );
   }

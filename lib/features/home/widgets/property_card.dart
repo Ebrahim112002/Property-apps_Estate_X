@@ -1,11 +1,113 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../models/property_model.dart';
+import 'package:estatex/services/supabase_service.dart';
+import '../../profile/screens/Dashboard/Hooks/property_details_page.dart';
+import '../../auth/screens/login_screen.dart';
 
-class PropertyCard extends StatelessWidget {
+class PropertyCard extends StatefulWidget {
   final Property property;
+  final VoidCallback? onRemove;
 
-  const PropertyCard({super.key, required this.property});
+  const PropertyCard({super.key, required this.property, this.onRemove});
+
+  @override
+  State<PropertyCard> createState() => _PropertyCardState();
+}
+
+class _PropertyCardState extends State<PropertyCard> {
+  final SupabaseService _service = SupabaseService();
+  bool _isFavorited = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorite();
+  }
+
+  Future<void> _checkIfFavorite() async {
+    if (_service.currentUser == null) return; // লগইন না থাকলে চেক করবে না
+
+    final isFav = await _service.isFavorite(widget.property.id);
+    if (mounted) {
+      setState(() => _isFavorited = isFav);
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    // ================== Login Check ==================
+    if (_service.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please login to add favorite"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final wasFavorited = _isFavorited;
+      bool success;
+      if (_isFavorited) {
+        success = await _service.removeFromFavorite(widget.property.id);
+      } else {
+        success = await _service.addToFavorite(widget.property.id);
+      }
+
+      if (success && mounted) {
+        setState(() {
+          _isFavorited = !_isFavorited;
+        });
+
+        if (wasFavorited && widget.onRemove != null) {
+          widget.onRemove!();
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isFavorited ? "Added to favorite ❤️" : "Removed from favorite",
+            ),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Toggle Favorite Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Helper methods
+  bool _isResidential(String? type) {
+    if (type == null) return false;
+    final t = type.toLowerCase();
+    return t.contains('apartment') ||
+        t.contains('house') ||
+        t.contains('villa') ||
+        t.contains('flat') ||
+        t.contains('residential') ||
+        t.contains('home');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +127,6 @@ class PropertyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ==================== Property Image Section ====================
           Stack(
             children: [
               ClipRRect(
@@ -34,7 +135,9 @@ class PropertyCard extends StatelessWidget {
                   topRight: Radius.circular(24),
                 ),
                 child: Image.network(
-                  property.imageUrls.isNotEmpty ? property.imageUrls.first : '',
+                  widget.property.imageUrls.isNotEmpty
+                      ? widget.property.imageUrls.first
+                      : '',
                   height: 210,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -52,25 +155,40 @@ class PropertyCard extends StatelessWidget {
                 ),
               ),
 
-              // Favorite Button (Top Right)
+              // ================== Favorite Button ==================
               Positioned(
                 right: 12,
                 top: 12,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.favorite_border,
-                    size: 22,
-                    color: AppColors.primary,
+                child: GestureDetector(
+                  onTap: _isLoading ? null : _toggleFavorite,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          )
+                        : Icon(
+                            _isFavorited
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            size: 22,
+                            color: _isFavorited
+                                ? Colors
+                                      .red
+                                      .shade400 // Light Red
+                                : AppColors.primary,
+                          ),
                   ),
                 ),
               ),
 
-              // Property Type Badge (Top Left)
+              // Property Type Badge
               Positioned(
                 left: 12,
                 top: 12,
@@ -84,7 +202,7 @@ class PropertyCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    property.propertyType.toUpperCase(),
+                    widget.property.propertyType.toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
@@ -96,15 +214,14 @@ class PropertyCard extends StatelessWidget {
             ],
           ),
 
-          // ==================== Property Details ====================
+          // ================== Property Details ==================
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title
                 Text(
-                  property.title,
+                  widget.property.title,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -116,14 +233,13 @@ class PropertyCard extends StatelessWidget {
 
                 const SizedBox(height: 8),
 
-                // Location
                 Row(
                   children: [
                     const Icon(Icons.location_on, size: 16, color: Colors.grey),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        property.location,
+                        widget.property.location,
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 13.5,
@@ -137,19 +253,15 @@ class PropertyCard extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Price + Features
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Price
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          property.listingType == 'Rent'
-                              ? "\$${property.price.toStringAsFixed(0)}"
-                              : "\$${property.price.toStringAsFixed(0)}",
+                          "\$${widget.property.price.toStringAsFixed(0)}",
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -157,7 +269,7 @@ class PropertyCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          property.listingType == 'Rent' ? "/month" : "",
+                          widget.property.listingType == 'Rent' ? "/month" : "",
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey.shade500,
@@ -166,17 +278,57 @@ class PropertyCard extends StatelessWidget {
                       ],
                     ),
 
-                    // Features Row
                     Row(
                       children: [
-                        _buildFeature(Icons.bed, "${property.bedrooms}"),
+                        if (_isResidential(widget.property.propertyType))
+                          _buildFeature(
+                            Icons.bed,
+                            "${widget.property.bedrooms}",
+                          ),
                         const SizedBox(width: 14),
-                        _buildFeature(Icons.bathtub, "${property.bathrooms}"),
+                        if (_isResidential(widget.property.propertyType))
+                          _buildFeature(
+                            Icons.bathtub,
+                            "${widget.property.bathrooms}",
+                          ),
                         const SizedBox(width: 14),
                         _buildFeature(Icons.garage_outlined, "1"),
                       ],
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PropertyDetailsPage(
+                            property: widget.property.toJson(),
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      "See Details",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -186,7 +338,6 @@ class PropertyCard extends StatelessWidget {
     );
   }
 
-  // Small helper widget for features
   Widget _buildFeature(IconData icon, String value) {
     return Row(
       children: [
@@ -194,11 +345,7 @@ class PropertyCard extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
+          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
         ),
       ],
     );

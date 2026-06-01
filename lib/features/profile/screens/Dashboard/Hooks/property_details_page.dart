@@ -31,6 +31,26 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     );
   }
 
+  // Helper methods
+  bool _isResidential(String? type) {
+    if (type == null) return false;
+    final t = type.toLowerCase();
+    return t.contains('apartment') ||
+           t.contains('house') ||
+           t.contains('villa') ||
+           t.contains('flat') ||
+           t.contains('residential') ||
+           t.contains('home');
+  }
+
+  bool _isLand(String? type) {
+    if (type == null) return false;
+    final t = type.toLowerCase();
+    return t.contains('land') || 
+           t.contains('plot') || 
+           t.contains('বাস্তু');
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<dynamic> images = widget.property['image_urls'] ?? [];
@@ -39,6 +59,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     final String price = widget.property['price']?.toString() ?? '0';
     final String listingType = widget.property['listing_type'] ?? '';
     final String description = widget.property['description'] ?? 'No description available.';
+    final String propertyType = widget.property['property_type'] ?? 'Property';
 
     return Scaffold(
       body: Stack(
@@ -105,7 +126,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(widget.property['property_type'] ?? 'Property', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                          Text(propertyType, 
+                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                           Text(
                             "৳$price${listingType == 'Rent' ? '/Month' : ''}",
                             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF046007)),
@@ -124,13 +146,24 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       ),
                       const SizedBox(height: 25),
 
-                      // Features
+                      // ================== Dynamic Features ==================
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildFeature(Icons.king_bed, "${widget.property['bedrooms'] ?? 0} Bed"),
-                          _buildFeature(Icons.bathtub, "${widget.property['bathrooms'] ?? 0} Bath"),
+                          // Bedrooms (Residential only)
+                          if (_isResidential(propertyType))
+                            _buildFeature(Icons.king_bed, "${widget.property['bedrooms'] ?? 0} Bed"),
+
+                          // Bathrooms (Residential only)
+                          if (_isResidential(propertyType))
+                            _buildFeature(Icons.bathtub, "${widget.property['bathrooms'] ?? 0} Bath"),
+
+                          // Area (All properties)
                           _buildFeature(Icons.square_foot, "${widget.property['area'] ?? 'N/A'} Sqft"),
+
+                          // Extra for Land/Plot
+                          if (_isLand(propertyType))
+                            _buildFeature(Icons.landscape, "${widget.property['plot_area'] ?? widget.property['area'] ?? 'N/A'} Sqft"),
                         ],
                       ),
 

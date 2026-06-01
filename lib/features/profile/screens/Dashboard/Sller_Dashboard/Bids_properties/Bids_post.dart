@@ -63,7 +63,7 @@ class _PostBidPropertyScreenState extends State<PostBidPropertyScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('ইমেজ সিলেক্ট করতে সমস্যা: $e')));
+        ).showSnackBar(SnackBar(content: Text('Problem in image selection: $e')));
       }
     }
   }

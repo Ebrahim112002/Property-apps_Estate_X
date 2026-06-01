@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
           } else if (role == 'admin') {
             Navigator.pushNamed(context, '/admin-profile');
           } else if (role == 'buyer') {
-            Navigator.pushNamed(context, '/buyer-profile');
+            Navigator.pushNamed(context, '/buyer-dashboard');
           } else {
             setState(() => _selectedIndex = 3);
           }
