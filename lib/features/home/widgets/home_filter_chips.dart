@@ -27,7 +27,8 @@ class HomeFilterChips extends StatelessWidget {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: ['Any type', 'Rent', 'Buy'].map((type) {
+            children: ['Any type', 'Rent', 'Sale'].map((type) {
+              // 👈 Buy বাদ দিয়ে তোমার ডেটা অনুযায়ী 'Sell' করা হলো
               bool isSelected = selectedType == type;
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
@@ -50,7 +51,8 @@ class HomeFilterChips extends StatelessWidget {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: ['House', 'Apartment', 'Villa', 'Land'].map((cat) {
+            children: ['Any type', 'Flat', 'Commercial', 'Land'].map((cat) {
+              // 👈 তোমার ডাটাবেজের নাম অনুযায়ী সেট করা হলো
               bool isSelected = selectedFilter == cat;
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
@@ -111,11 +113,7 @@ class HomeFilterChips extends StatelessWidget {
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: AppColors.primary,
-          size: 22,
-        ),
+        Icon(icon, color: AppColors.primary, size: 22),
         const SizedBox(width: 10),
         Text(
           title,

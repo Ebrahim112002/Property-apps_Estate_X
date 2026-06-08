@@ -27,7 +27,7 @@ class _PropertyCardState extends State<PropertyCard> {
   }
 
   Future<void> _checkIfFavorite() async {
-    if (_service.currentUser == null) return; // লগইন না থাকলে চেক করবে না
+    if (_service.currentUser == null) return; 
 
     final isFav = await _service.isFavorite(widget.property.id);
     if (mounted) {
@@ -36,7 +36,6 @@ class _PropertyCardState extends State<PropertyCard> {
   }
 
   Future<void> _toggleFavorite() async {
-    // ================== Login Check ==================
     if (_service.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -97,7 +96,6 @@ class _PropertyCardState extends State<PropertyCard> {
     }
   }
 
-  // Helper methods
   bool _isResidential(String? type) {
     if (type == null) return false;
     final t = type.toLowerCase();
@@ -154,8 +152,6 @@ class _PropertyCardState extends State<PropertyCard> {
                   },
                 ),
               ),
-
-              // ================== Favorite Button ==================
               Positioned(
                 right: 12,
                 top: 12,
@@ -179,16 +175,12 @@ class _PropertyCardState extends State<PropertyCard> {
                                 : Icons.favorite_border,
                             size: 22,
                             color: _isFavorited
-                                ? Colors
-                                      .red
-                                      .shade400 // Light Red
+                                ? Colors.red.shade400
                                 : AppColors.primary,
                           ),
                   ),
                 ),
               ),
-
-              // Property Type Badge
               Positioned(
                 left: 12,
                 top: 12,
@@ -213,8 +205,6 @@ class _PropertyCardState extends State<PropertyCard> {
               ),
             ],
           ),
-
-          // ================== Property Details ==================
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -230,9 +220,7 @@ class _PropertyCardState extends State<PropertyCard> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-
                 const SizedBox(height: 8),
-
                 Row(
                   children: [
                     const Icon(Icons.location_on, size: 16, color: Colors.grey),
@@ -250,9 +238,7 @@ class _PropertyCardState extends State<PropertyCard> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 16),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -277,7 +263,6 @@ class _PropertyCardState extends State<PropertyCard> {
                         ),
                       ],
                     ),
-
                     Row(
                       children: [
                         if (_isResidential(widget.property.propertyType))
@@ -297,9 +282,7 @@ class _PropertyCardState extends State<PropertyCard> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 20),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
