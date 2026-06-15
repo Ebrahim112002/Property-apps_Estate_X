@@ -22,7 +22,6 @@ class DashboardQuickActions extends StatelessWidget {
             Navigator.pushNamed(context, '/add-property', arguments: 'Normal');
           },
         ),
-
         _buildActionButton(
           icon: Icons.gavel_outlined,
           label: "Add Auction properties",
@@ -31,14 +30,12 @@ class DashboardQuickActions extends StatelessWidget {
             Navigator.pushNamed(context, '/add-bid-properties', arguments: 'Auction');
           },
         ),
-
         _buildActionButton(
           icon: Icons.list_alt_outlined,
           label: "My Properties",
           color: Colors.indigo,
           onTap: () => Navigator.pushNamed(context, '/my-properties'),
         ),
-
         _buildActionButton(
           icon: Icons.local_offer_outlined,
           label: "Your Bids Properties",
@@ -97,14 +94,14 @@ class DashboardStatsGrid extends StatelessWidget {
   final int totalProperties;
   final int activeListings;
   final int totalBids;
-  final int totalFavorites;   // ← নতুন: Favorites Count
+  final int totalFavorites;
 
   const DashboardStatsGrid({
     super.key,
     required this.totalProperties,
     required this.activeListings,
     required this.totalBids,
-    required this.totalFavorites,   // ← এখানে পাস করবে
+    required this.totalFavorites,
   });
 
   @override
@@ -117,12 +114,14 @@ class DashboardStatsGrid extends StatelessWidget {
       mainAxisSpacing: 14,
       childAspectRatio: 1.65,
       children: [
-        _buildStatCard(
+      _buildStatCard(
           "Total Properties",
           totalProperties.toString(),
           Icons.home_work_outlined,
           Colors.blue,
-          onTap: () {}, // চাইলে পরে নেভিগেশন দিতে পারো
+          onTap: () {
+            Navigator.pushNamed(context, '/seller-booking-requests');
+          },
         ),
         _buildStatCard(
           "Active Listings",
@@ -132,19 +131,23 @@ class DashboardStatsGrid extends StatelessWidget {
           onTap: () {},
         ),
         _buildStatCard(
-          "Total Bids",
+          "Total Bids",           // ← এখানে ক্লিক করলে Bid History দেখাবে
           totalBids.toString(),
           Icons.gavel_rounded,
           Colors.orange,
-          onTap: () {},
+          onTap: () {
+            Navigator.pushNamed(context, '/seller-bid-history');   // ← Route Name
+            // অথবা MaterialPageRoute দিয়ে সরাসরি স্ক্রিনে যেতে চাইলে:
+            // Navigator.push(context, MaterialPageRoute(builder: (_) => SellerBidHistoryScreen()));
+          },
         ),
         _buildStatCard(
-          "Favorites",                    // ← Changed
-          totalFavorites.toString(),      // ← Dynamic
-          Icons.favorite,                 // ← Changed
+          "Favorites",
+          totalFavorites.toString(),
+          Icons.favorite,
           Colors.purple,
           onTap: () {
-            Navigator.pushNamed(context, '/favorites');   // ← Navigate to Favorites Page
+            Navigator.pushNamed(context, '/favorites');
           },
         ),
       ],
@@ -186,6 +189,12 @@ class DashboardStatsGrid extends StatelessWidget {
               title,
               style: TextStyle(fontSize: 13.5, color: Colors.grey[700]),
             ),
+            const SizedBox(height: 4),
+            if (title == "Total Bids")
+              const Text(
+                "Tap to see details",
+                style: TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.w500),
+              ),
           ],
         ),
       ),

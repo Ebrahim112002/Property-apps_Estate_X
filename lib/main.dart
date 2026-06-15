@@ -21,6 +21,9 @@ import 'features/profile/screens/Dashboard/Buyer_dashboard/Buyer_dashboard_home_
 // post bids
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/Bids_post.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
+import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/seller_bid_history_screen.dart';
+import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
+import 'features/profile/screens/Dashboard/Sller_Dashboard/SellerBookingRequestsScreen.dart';
 import 'features/profile/screens/Dashboard/Hooks/favorite.dart';
 
 // Profile Screens
@@ -29,9 +32,9 @@ import 'features/profile/screens/admin_profile_screen.dart';
 import 'features/profile/screens/buyer_profile_screen.dart';
 import 'features/profile/screens/seller_profile_screen.dart';
 
-import 'features/profile/screens/Dashboard/Sller_Dashboard/post_properties.dart'; 
+import 'features/profile/screens/Dashboard/Sller_Dashboard/post_properties.dart';
 
-import 'features/profile/screens/Dashboard/Sller_Dashboard/my_properties.dart'; 
+import 'features/profile/screens/Dashboard/Sller_Dashboard/my_properties.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,7 +71,7 @@ class EstateXApp extends StatelessWidget {
         '/admin-profile': (context) => const AdminProfileScreen(),
         '/buyer-profile': (context) => const BuyerProfileScreen(),
         '/seller-profile': (context) => const SellerProfileScreen(),
-        
+
         // Add Property Route
         '/add-property': (context) => const AddPropertyScreen(),
         '/my-properties': (context) => const MyPropertiesScreen(),
@@ -76,10 +79,12 @@ class EstateXApp extends StatelessWidget {
         '/all-bid-properties': (context) => const AllBidPropertiesScreen(),
         '/add-bid-properties': (context) => const PostBidPropertyScreen(),
         '/my-bid-properties': (context) => const MyBidPropertiesScreen(),
-        
+
         '/buyer-dashboard': (context) => const BuyerDashboardHomeScreen(),
-        
+
         '/favorites': (context) => const FavoritePage(),
+        '/seller-bid-history': (context) => const SellerBidHistoryScreen(),
+        '/seller-booking-requests': (context) => const SellerBookingRequestsScreen(),
       },
     );
   }

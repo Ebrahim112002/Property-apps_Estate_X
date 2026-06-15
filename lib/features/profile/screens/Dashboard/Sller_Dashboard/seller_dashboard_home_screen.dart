@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../Hooks/Header.dart';
 import '../Hooks/dashboard_cards.dart';
+import '../../../../../services/supabase_service.dart';   // ← যোগ করুন
 
 class SellerDashboardHomeScreen extends StatefulWidget {
   const SellerDashboardHomeScreen({super.key});
@@ -11,26 +12,56 @@ class SellerDashboardHomeScreen extends StatefulWidget {
 }
 
 class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
-  // পরে Supabase থেকে আসবে
-  int totalProperties = 12;
-  int activeListings = 7;
-  int totalBids = 89;
-  int totalInterested = 54;
+  final _supabaseService = SupabaseService();
 
-  // হেডার রিসেট করার জন্য UniqueKey ব্যবহার করছি যেন রিফ্রেশ করলে নতুন করে ডেটা লোড হয়
-  Key headerKey = UniqueKey();
+  // Dynamic Stats
+  int totalProperties = 0;
+  int activeListings = 0;
+  int totalBids = 0;
+  int totalInterested = 0;   // Favorites / Interested
 
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+    try {
+      final myProperties = await _supabaseService.fetchMyBidProperties();
+
+      setState(() {
+        totalProperties = myProperties.length;
+
+        // Active Listings
+        activeListings = myProperties.where((p) => p['is_active'] == true).length;
+
+        // ✅ Fixed: Total Bids - Safe way
+        totalBids = myProperties.fold<int>(0, (sum, p) {
+          final bidCount = p['bid_count'];
+          if (bidCount is int) return sum + bidCount;
+          if (bidCount is double) return sum + bidCount.toInt();
+          return sum;
+        });
+
+        // totalInterested পরে যোগ করবেন
+        // totalInterested = ... 
+      });
+    } catch (e) {
+      debugPrint('Dashboard data load error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async {
-            setState(() {
-              headerKey = UniqueKey(); // হেডার রিলোড ট্রিগার করবে
-            });
-          },
+          onRefresh: _loadDashboardData,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -39,14 +70,14 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
               children: [
                 // ==================== HEADER ====================
                 DashboardHeader(
-                  key: headerKey,
+                  key: UniqueKey(),
                   title: 'Seller Dashboard',
                   role: 'Seller',
                   profileRoute: '/seller-profile',
                 ),
                 const SizedBox(height: 24),
 
-                // ==================== QUICK ACTIONS (এখন উপরে) ====================
+                // ==================== QUICK ACTIONS ====================
                 const Text(
                   "Quick Actions",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -55,13 +86,17 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                 const DashboardQuickActions(),
                 const SizedBox(height: 28),
 
-                // ==================== STATISTICS GRID (এখন নিচে) ====================
-                DashboardStatsGrid(
-                  totalProperties: totalProperties,
-                  activeListings: activeListings,
-                  totalBids: totalBids,
-                  totalFavorites: totalInterested,
-                ),
+                // ==================== STATISTICS GRID ====================
+                if (_isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  DashboardStatsGrid(
+                    totalProperties: totalProperties,
+                    activeListings: activeListings,
+                    totalBids: totalBids,
+                    totalFavorites: totalInterested,
+                  ),
+
                 const SizedBox(height: 28),
 
                 // ==================== RECENT PROPERTIES ====================
@@ -70,14 +105,10 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                   children: [
                     const Text(
                       "Recent Properties",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                     TextButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, '/my-properties'),
+                      onPressed: () => Navigator.pushNamed(context, '/my-properties'),
                       child: const Text("View All"),
                     ),
                   ],
@@ -94,13 +125,12 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
 
   // ==================== RECENT PROPERTIES WIDGET ====================
   Widget _buildRecentProperties() {
+    // এখনো স্ট্যাটিক রাখা হয়েছে। পরে Supabase থেকে আনতে পারবেন
     return Column(
       children: List.generate(3, (index) {
         return Card(
           margin: const EdgeInsets.only(bottom: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 3,
           child: ListTile(
             contentPadding: const EdgeInsets.all(14),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../../services/supabase_service.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
   final Map<String, dynamic> property;
@@ -9,46 +10,136 @@ class PropertyDetailsPage extends StatefulWidget {
 }
 
 class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
+  final _supabaseService = SupabaseService();
   int _currentIndex = 0;
+  bool _isRequesting = false;
+  bool _hasRequestedBooking = false;
 
-  void _showBookingAlert() {
-    showDialog(
+  @override
+  void initState() {
+    super.initState();
+    _loadBookingStatus();
+  }
+
+  String? _getPropertyId() {
+    return (widget.property['id'] ?? widget.property['property_id'])
+        ?.toString();
+  }
+
+  Future<void> _loadBookingStatus() async {
+    final propertyId = _getPropertyId();
+    if (propertyId == null || propertyId.isEmpty) return;
+
+    try {
+      final hasRequested = await _supabaseService.hasRequestedBooking(
+        propertyId: propertyId,
+      );
+      if (mounted) {
+        setState(() {
+          _hasRequestedBooking = hasRequested;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading booking status: $e');
+    }
+  }
+
+  Future<void> _requestBooking() async {
+    debugPrint("Full Property Data Received: ${widget.property}");
+
+    // Try multiple possible ID keys
+    final propertyId = _getPropertyId();
+
+    if (propertyId == null || propertyId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error: Property ID not found. Please refresh."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final shouldProceed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("✅ Request Received"),
+        title: const Text("Confirm Booking Request"),
         content: const Text(
-          "We will contact you soon with more details.\nThank you for your interest!",
+          "Do you want to send a booking request for this property?\n\n"
+          "The seller will contact you soon.",
           textAlign: TextAlign.center,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK", style: TextStyle(fontSize: 16)),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes, Request"),
           ),
         ],
       ),
     );
+
+    if (shouldProceed != true) return;
+
+    if (_hasRequestedBooking) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You have already requested booking for this property'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isRequesting = true);
+
+    try {
+      final success = await _supabaseService.requestBooking(
+        propertyId: propertyId,
+        message: "I am interested in this property. Please contact me.",
+      );
+      if (success && mounted) {
+        setState(() {
+          _hasRequestedBooking = true;
+        });
+
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("✅ Booking Request Sent Successfully!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } 
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isRequesting = false);
+    }
   }
 
-  // Helper methods
   bool _isResidential(String? type) {
     if (type == null) return false;
     final t = type.toLowerCase();
     return t.contains('apartment') ||
-           t.contains('house') ||
-           t.contains('villa') ||
-           t.contains('flat') ||
-           t.contains('residential') ||
-           t.contains('home');
+        t.contains('house') ||
+        t.contains('villa') ||
+        t.contains('flat') ||
+        t.contains('residential') ||
+        t.contains('home');
   }
 
   bool _isLand(String? type) {
     if (type == null) return false;
     final t = type.toLowerCase();
-    return t.contains('land') || 
-           t.contains('plot') || 
-           t.contains('বাস্তু');
+    return t.contains('land') || t.contains('plot') || t.contains('বাস্তু');
   }
 
   @override
@@ -58,7 +149,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     final String location = widget.property['location'] ?? 'No Location';
     final String price = widget.property['price']?.toString() ?? '0';
     final String listingType = widget.property['listing_type'] ?? '';
-    final String description = widget.property['description'] ?? 'No description available.';
+    final String description =
+        widget.property['description'] ?? 'No description available.';
     final String propertyType = widget.property['property_type'] ?? 'Property';
 
     return Scaffold(
@@ -68,7 +160,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Main Image
                 SizedBox(
                   height: 380,
                   width: double.infinity,
@@ -76,15 +167,21 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       ? Image.network(
                           images[_currentIndex],
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 100),
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.broken_image, size: 100),
                         )
-                      : Container(color: Colors.grey[300], child: const Icon(Icons.image, size: 100)),
+                      : Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image, size: 100),
+                        ),
                 ),
 
-                // Thumbnail Images
                 if (images.length > 1)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
                     child: SizedBox(
                       height: 85,
                       child: ListView.builder(
@@ -97,7 +194,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                               margin: const EdgeInsets.only(right: 10),
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: _currentIndex == index ? Colors.green : Colors.transparent,
+                                  color: _currentIndex == index
+                                      ? Colors.green
+                                      : Colors.transparent,
                                   width: 3,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
@@ -126,51 +225,87 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(propertyType, 
-                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                          Text(
+                            propertyType,
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           Text(
                             "৳$price${listingType == 'Rent' ? '/Month' : ''}",
-                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF046007)),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF046007),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(title, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           const Icon(Icons.location_on, color: Colors.grey),
                           const SizedBox(width: 6),
-                          Expanded(child: Text(location, style: const TextStyle(color: Colors.grey, fontSize: 16))),
+                          Expanded(
+                            child: Text(
+                              location,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 25),
 
-                      // ================== Dynamic Features ==================
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          // Bedrooms (Residential only)
                           if (_isResidential(propertyType))
-                            _buildFeature(Icons.king_bed, "${widget.property['bedrooms'] ?? 0} Bed"),
-
-                          // Bathrooms (Residential only)
+                            _buildFeature(
+                              Icons.king_bed,
+                              "${widget.property['bedrooms'] ?? 0} Bed",
+                            ),
                           if (_isResidential(propertyType))
-                            _buildFeature(Icons.bathtub, "${widget.property['bathrooms'] ?? 0} Bath"),
-
-                          // Area (All properties)
-                          _buildFeature(Icons.square_foot, "${widget.property['area'] ?? 'N/A'} Sqft"),
-
-                          // Extra for Land/Plot
+                            _buildFeature(
+                              Icons.bathtub,
+                              "${widget.property['bathrooms'] ?? 0} Bath",
+                            ),
+                          _buildFeature(
+                            Icons.square_foot,
+                            "${widget.property['area'] ?? 'N/A'} Sqft",
+                          ),
                           if (_isLand(propertyType))
-                            _buildFeature(Icons.landscape, "${widget.property['plot_area'] ?? widget.property['area'] ?? 'N/A'} Sqft"),
+                            _buildFeature(
+                              Icons.landscape,
+                              "${widget.property['plot_area'] ?? widget.property['area'] ?? 'N/A'} Sqft",
+                            ),
                         ],
                       ),
 
                       const SizedBox(height: 35),
-                      const Text("Description", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      const Text(
+                        "Description",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 12),
-                      Text(description, style: const TextStyle(fontSize: 16, height: 1.65)),
+                      Text(
+                        description,
+                        style: const TextStyle(fontSize: 16, height: 1.65),
+                      ),
                     ],
                   ),
                 ),
@@ -178,28 +313,39 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
             ),
           ),
 
-          // Floating Book Now Button
           Positioned(
             bottom: 20,
             left: 20,
             right: 20,
             child: ElevatedButton(
-              onPressed: _showBookingAlert,
+              onPressed: (_isRequesting || _hasRequestedBooking)
+                  ? null
+                  : _requestBooking,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
+                backgroundColor: _hasRequestedBooking
+                    ? Colors.grey
+                    : Colors.green[700],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 8,
               ),
-              child: const Text(
-                "Request for Booking",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              child: _isRequesting
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(
+                      _hasRequestedBooking
+                          ? "Requested Already"
+                          : "Request for Booking",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
 
-          // Back Button
           Positioned(
             top: 50,
             left: 20,

@@ -5,8 +5,8 @@ class Property {
   final String location;
   final double price;
   final List<String> imageUrls; // ✅ একাধিক ইমেজের জন্য List<String>
-  final String propertyType;    // 'Land', 'Flat', ইত্যাদি
-  final String listingType;     // 'Rent' বা 'Sale'
+  final String propertyType; // 'Land', 'Flat', ইত্যাদি
+  final String listingType; // 'Rent' বা 'Sale'
   final String? sellerName;
   final int bedrooms;
   final int bathrooms;
@@ -36,7 +36,8 @@ class Property {
     List<String> urls = [];
     if (json['image_urls'] != null) {
       urls = List<String>.from(json['image_urls']);
-    } else if (json['image_url'] != null && json['image_url'].toString().isNotEmpty) {
+    } else if (json['image_url'] != null &&
+        json['image_url'].toString().isNotEmpty) {
       urls = [json['image_url']];
     }
 
@@ -54,7 +55,7 @@ class Property {
       bathrooms: json['bathrooms'] ?? json['bathroom'] ?? 0,
       area: (json['area'] ?? json['size'] ?? 0).toDouble(),
       isVerified: json['is_verified'] ?? json['verified'] ?? false,
-      createdAt: json['created_at'] != null 
+      createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'].toString())
           : DateTime.now(),
     );
@@ -70,6 +71,7 @@ class Property {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'seller_id': sellerId,
       'title': title,
       'location': location,

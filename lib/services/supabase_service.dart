@@ -726,4 +726,102 @@ class SupabaseService {
       return [];
     }
   }
+
+  // ─────────────────────────────────────────
+  // BOOKING REQUESTS
+  // ─────────────────────────────────────────
+
+  /// একজন ইউজার একটি প্রপার্টিতে শুধুমাত্র একবার Request করতে পারবে
+  Future<bool> requestBooking({
+    required String propertyId,
+    String? message,
+  }) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      // Check if already requested
+      final existing = await _supabase
+          .from('booking_requests')
+          .select('id')
+          .eq('property_id', propertyId)
+          .eq('requester_id', user.id)
+          .maybeSingle();
+
+      if (existing != null) {
+        throw Exception('You have already requested booking for this property');
+      }
+
+      await _supabase.from('booking_requests').insert({
+        'property_id': propertyId,
+        'requester_id': user.id,
+        'message': message ?? 'Interested in this property',
+        'status': 'pending',
+      });
+
+      debugPrint(
+        '✅ Booking request sent successfully for property: $propertyId',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('❌ Booking request error: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> hasRequestedBooking({required String propertyId}) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return false;
+
+      final existing = await _supabase
+          .from('booking_requests')
+          .select('id')
+          .eq('property_id', propertyId)
+          .eq('requester_id', user.id)
+          .maybeSingle();
+
+      return existing != null;
+    } catch (e) {
+      debugPrint('❌ Check booking request error: $e');
+      return false;
+    }
+  }
+
+  /// Seller এর জন্য Booking Requests History
+  Future<List<dynamic>> getBookingRequestsForSeller({
+    required String propertyId,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('booking_requests')
+          .select('*, profiles!requester_id(full_name, email, avatar_url)')
+          .eq('property_id', propertyId)
+          .order('created_at', ascending: false);
+
+      return response;
+    } catch (e) {
+      debugPrint('Get booking requests error: $e');
+      return [];
+    }
+  }
+
+  /// User এর নিজের Booking Requests
+  Future<List<dynamic>> getMyBookingRequests() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return [];
+
+      final response = await _supabase
+          .from('booking_requests')
+          .select('*, properties(*)')
+          .eq('requester_id', user.id)
+          .order('created_at', ascending: false);
+
+      return response;
+    } catch (e) {
+      debugPrint('Get my booking requests error: $e');
+      return [];
+    }
+  }
 }
