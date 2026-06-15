@@ -283,10 +283,9 @@ class SupabaseService {
   }
 
   // ─────────────────────────────────────────
-  // PROPERTY IMAGES UPLOAD (NEW)
+  // PROPERTY IMAGES UPLOAD
   // ─────────────────────────────────────────
 
-  /// Multiple images upload for properties
   Future<List<String>> uploadPropertyImages(
     String userId,
     List<Map<String, dynamic>> imageFiles,
@@ -310,7 +309,6 @@ class SupabaseService {
         final String fileName = '${userId}_${timestamp}_$i.$ext';
         final String path = fileName;
 
-        // Try HTTP Upload first (same as avatar)
         final uploadUrl =
             '$supabaseUrl/storage/v1/object/property_images/$path';
         final uri = Uri.parse(uploadUrl);
@@ -339,12 +337,12 @@ class SupabaseService {
         }
       } catch (e) {
         debugPrint('❌ Property image $i upload failed: $e');
-        // Continue with other images
       }
     }
 
     return publicUrls;
   }
+
   // ─────────────────────────────────────────
   // BID PROPERTIES
   // ─────────────────────────────────────────
@@ -395,8 +393,6 @@ class SupabaseService {
               '$supabaseUrl/storage/v1/object/public/bid_properties/$fileName';
           publicUrls.add(publicUrl);
           debugPrint('✅ Bid image $i uploaded successfully');
-        } else {
-          debugPrint('❌ Upload failed: ${streamedResponse.statusCode}');
         }
       } catch (e) {
         debugPrint('❌ Image $i upload error: $e');
@@ -444,6 +440,7 @@ class SupabaseService {
         'end_time': endTime.toIso8601String(),
         'is_active': true,
         'is_verified': false,
+        'bid_count': 0,
       };
 
       await _supabase.from('bid_properties').insert(data);
@@ -547,6 +544,41 @@ class SupabaseService {
     }
   }
 
+  // ─────────────────────────────────────────
+  // BID RELATED - FIXED
+  // ─────────────────────────────────────────
+
+  /// Highest Bidder Profile
+  Future<Map<String, dynamic>?> getUserProfile({required String userId}) async {
+    try {
+      final data = await _supabase
+          .from('profiles')
+          .select('id, full_name, email, avatar_url')
+          .eq('id', userId)
+          .maybeSingle();
+      return data;
+    } catch (e) {
+      debugPrint('Get user profile error: $e');
+      return null;
+    }
+  }
+
+  /// ✅ Fixed - Total Bids Count
+  Future<int> getBidCount({required String bidPropertyId}) async {
+    try {
+      final response = await _supabase
+          .from('bids')
+          .select('id')
+          .eq('bid_property_id', bidPropertyId);
+
+      return (response as List).length;
+    } catch (e) {
+      debugPrint('Get bid count error: $e');
+      return 0;
+    }
+  }
+
+  /// ✅ Fixed Place Bid - bids table + bid_properties update
   Future<bool> placeBid({
     required String bidPropertyId,
     required double bidAmount,
@@ -555,6 +587,27 @@ class SupabaseService {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('User not logged in');
 
+      // Check current highest bid
+      final current = await _supabase
+          .from('bid_properties')
+          .select('current_highest_bid')
+          .eq('id', bidPropertyId)
+          .maybeSingle();
+
+      if (current == null) throw Exception('Property not found');
+
+      if (bidAmount <= (current['current_highest_bid'] ?? 0)) {
+        throw Exception('Bid must be higher than current highest bid');
+      }
+
+      // Insert into bids history table
+      await _supabase.from('bids').insert({
+        'bid_property_id': bidPropertyId,
+        'bidder_id': user.id,
+        'bid_amount': bidAmount,
+      });
+
+      // Update main property
       await _supabase
           .from('bid_properties')
           .update({
@@ -564,19 +617,17 @@ class SupabaseService {
           })
           .eq('id', bidPropertyId);
 
-      debugPrint('✅ Bid placed: $bidAmount on $bidPropertyId by ${user.id}');
+      debugPrint('✅ Bid placed successfully! Amount: ৳$bidAmount');
       return true;
     } catch (e) {
       debugPrint('❌ Place Bid Error: $e');
       rethrow;
     }
   }
-
   // ─────────────────────────────────────────
   // FAVORITES
   // ─────────────────────────────────────────
 
-  /// Add Property to Favorite
   Future<bool> addToFavorite(String propertyId) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -595,7 +646,6 @@ class SupabaseService {
     }
   }
 
-  /// Remove Property from Favorite
   Future<bool> removeFromFavorite(String propertyId) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -615,7 +665,6 @@ class SupabaseService {
     }
   }
 
-  /// Check if Property is already in Favorite
   Future<bool> isFavorite(String propertyId) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -635,7 +684,6 @@ class SupabaseService {
     }
   }
 
-  /// Get All Favorite Properties of Current User
   Future<List<Property>> getFavoriteProperties() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -654,6 +702,27 @@ class SupabaseService {
       }).toList();
     } catch (e) {
       debugPrint('❌ Fetch favorites error: $e');
+      return [];
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // BID HISTORY FOR SELLER
+  // ─────────────────────────────────────────
+
+  Future<List<dynamic>> getBidHistoryForSeller({
+    required String bidPropertyId,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('bids')
+          .select('*, profiles!bidder_id(full_name, avatar_url, email)')
+          .eq('bid_property_id', bidPropertyId)
+          .order('created_at', ascending: false);
+
+      return response;
+    } catch (e) {
+      debugPrint('Get bid history error: $e');
       return [];
     }
   }

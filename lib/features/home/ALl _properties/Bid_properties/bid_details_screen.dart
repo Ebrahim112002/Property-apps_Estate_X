@@ -3,7 +3,6 @@ import '../../../../../services/supabase_service.dart';
 
 class BidDetailsScreen extends StatefulWidget {
   final dynamic bid;
-
   const BidDetailsScreen({super.key, required this.bid});
 
   @override
@@ -14,7 +13,44 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
   final _supabaseService = SupabaseService();
   final _bidAmountController = TextEditingController();
   bool _isLoading = false;
-  int _currentIndex = 0; // <-- Added for image control
+  int _currentIndex = 0;
+
+  // New state for highest bidder and bid count
+  Map<String, dynamic>? _highestBidder;
+  int _totalBids = 0;
+  bool _isFetchingBidder = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHighestBidderAndBidCount();
+  }
+
+  Future<void> _fetchHighestBidderAndBidCount() async {
+    setState(() => _isFetchingBidder = true);
+    try {
+      final bidId = widget.bid['id'];
+
+      // Fetch total bids count
+      final bidCountResult = await _supabaseService.getBidCount(bidPropertyId: bidId);
+      _totalBids = bidCountResult ?? 0;
+
+      // Fetch highest bidder profile
+      final highestBidderId = widget.bid['highest_bidder_id'];
+      if (highestBidderId != null) {
+        final bidderData = await _supabaseService.getUserProfile(userId: highestBidderId);
+        if (bidderData != null) {
+          _highestBidder = bidderData;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching bidder info: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isFetchingBidder = false);
+      }
+    }
+  }
 
   Future<void> _placeBid() async {
     final bidAmount = double.tryParse(_bidAmountController.text.trim());
@@ -24,8 +60,7 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
       );
       return;
     }
-
-    if (bidAmount <= widget.bid['current_highest_bid']) {
+    if (bidAmount <= (widget.bid['current_highest_bid'] ?? 0)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Bid must be higher than current highest bid'),
@@ -34,14 +69,35 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    // Professional warning for frivolous bids
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Your Bid'),
+        content: const Text(
+          'Bidding is a serious commitment. Please ensure you have the financial capacity to complete the purchase if you win the auction. Fake or insincere bids may result in account suspension.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Place Bid'),
+          ),
+        ],
+      ),
+    );
 
+    if (shouldProceed != true) return;
+
+    setState(() => _isLoading = true);
     try {
       final success = await _supabaseService.placeBid(
         bidPropertyId: widget.bid['id'],
         bidAmount: bidAmount,
       );
-
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -50,6 +106,9 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
           ),
         );
         _bidAmountController.clear();
+
+        // Refresh data after successful bid
+        await _fetchHighestBidderAndBidCount();
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -65,6 +124,7 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
     final bid = widget.bid;
     final List<dynamic> images = bid['image_urls'] ?? [];
     final bool isActive = bid['is_active'] ?? true;
+    final currentHighest = bid['current_highest_bid'] ?? 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -80,7 +140,7 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ==================== Image Section (PropertyDetails Style) ====================
+                // Image Section
                 SizedBox(
                   height: 380,
                   width: double.infinity,
@@ -101,7 +161,7 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                         ),
                 ),
 
-                // Thumbnail Images
+                // Thumbnails
                 if (images.length > 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -179,7 +239,6 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 12),
                       Text(
                         bid['title'],
@@ -196,10 +255,122 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                           color: Colors.grey,
                         ),
                       ),
-
                       const SizedBox(height: 24),
 
-                      // Bid Information - Golden Card
+                      // Highest Bidder Section
+                      if (_highestBidder != null) ...[
+                        const Text(
+                          "Highest Bidder",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 28,
+                                backgroundImage: _highestBidder!['avatar_url'] != null
+                                    ? NetworkImage(_highestBidder!['avatar_url'])
+                                    : null,
+                                child: _highestBidder!['avatar_url'] == null
+                                    ? const Icon(Icons.person, size: 28)
+                                    : null,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _highestBidder!['full_name'] ?? 'Anonymous',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (_highestBidder!['email'] != null)
+                                      Text(
+                                        _highestBidder!['email'],
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    "৳ $currentHighest",
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Leading Bid",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // Bid Statistics
+                      Row(
+                        children: [
+                          const Text(
+                            "Total Bids",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_isFetchingBidder)
+                            const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          else
+                            Text(
+                              "$_totalBids",
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Current Highest Bid Card
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -218,7 +389,7 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                               ),
                             ),
                             Text(
-                              "৳ ${bid['current_highest_bid']}",
+                              "৳ $currentHighest",
                               style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -237,10 +408,9 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 24),
 
-                      // Property Details
+                      // Property Details (unchanged)
                       const Text(
                         "Property Details",
                         style: TextStyle(
@@ -342,19 +512,6 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
               ],
             ),
           ),
-
-          // Back Button (Optional - AppBar already has back, but matching PropertyDetails style)
-          // Positioned(
-          //   top: 50,
-          //   left: 20,
-          //   child: CircleAvatar(
-          //     backgroundColor: Colors.white,
-          //     child: IconButton(
-          //       icon: const Icon(Icons.arrow_back, color: Colors.black),
-          //       onPressed: () => Navigator.pop(context),
-          //     ),
-          //   ),
-          // ),
         ],
       ),
     );
@@ -373,6 +530,6 @@ class _BidDetailsScreenState extends State<BidDetailsScreen> {
           ),
         ],
       ),
-    ); //comment
+    );
   }
 }
