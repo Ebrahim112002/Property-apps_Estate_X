@@ -726,88 +726,67 @@ class SupabaseService {
       return [];
     }
   }
-
   // ─────────────────────────────────────────
-  // BOOKING REQUESTS
+  // BOOKING REQUESTS (FIXED & ALIGNED VERSION)
   // ─────────────────────────────────────────
 
-  /// একজন ইউজার একটি প্রপার্টিতে শুধুমাত্র একবার Request করতে পারবে
-  Future<bool> requestBooking({
+  /// ✅ 1. Create a Booking Request (Buyer trigger points - 'message' field excluded)
+  Future<bool> createBookingRequest({
     required String propertyId,
-    String? message,
+    required String sellerId,
   }) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('User not logged in');
 
-      // Check if already requested
-      final existing = await _supabase
-          .from('booking_requests')
-          .select('id')
-          .eq('property_id', propertyId)
-          .eq('requester_id', user.id)
-          .maybeSingle();
-
-      if (existing != null) {
-        throw Exception('You have already requested booking for this property');
-      }
-
-      await _supabase.from('booking_requests').insert({
+      final data = {
         'property_id': propertyId,
-        'requester_id': user.id,
-        'message': message ?? 'Interested in this property',
+        'buyer_id': user.id,
+        'seller_id': sellerId,
         'status': 'pending',
-      });
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
-      debugPrint(
-        '✅ Booking request sent successfully for property: $propertyId',
-      );
+      // 'message' column chara safely insert hobe PGRST204 error bad diye
+      await _supabase.from('booking_requests').insert(data);
+      debugPrint('✅ Booking Request Sent Successfully!');
       return true;
     } catch (e) {
-      debugPrint('❌ Booking request error: $e');
-      rethrow;
-    }
-  }
-
-  Future<bool> hasRequestedBooking({required String propertyId}) async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return false;
-
-      final existing = await _supabase
-          .from('booking_requests')
-          .select('id')
-          .eq('property_id', propertyId)
-          .eq('requester_id', user.id)
-          .maybeSingle();
-
-      return existing != null;
-    } catch (e) {
-      debugPrint('❌ Check booking request error: $e');
+      debugPrint('❌ Create Booking Request Error: $e');
       return false;
     }
   }
 
-  /// Seller এর জন্য Booking Requests History
-  Future<List<dynamic>> getBookingRequestsForSeller({
-    required String propertyId,
-  }) async {
+  /// ✅ 2. Fetch Booking Requests for Seller (With Profiles relational parsing)
+  Future<List<Map<String, dynamic>>> fetchSellersBookingRequests() async {
     try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return [];
+
+      // Seller page er explicit structural inner join filtering mapping query
       final response = await _supabase
           .from('booking_requests')
-          .select('*, profiles!requester_id(full_name, email, avatar_url)')
-          .eq('property_id', propertyId)
+          .select('''
+            id,
+            status,
+            created_at,
+            buyer_id,
+            profiles!buyer_id(full_name, email, role, city, area), 
+            properties(id, title, price, location, image_urls)
+          ''')
+          .eq('seller_id', user.id)
           .order('created_at', ascending: false);
 
-      return response;
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      debugPrint('Get booking requests error: $e');
+      debugPrint('❌ Fetch Seller Bookings Error: $e');
       return [];
     }
   }
 
-  /// User এর নিজের Booking Requests
-  Future<List<dynamic>> getMyBookingRequests() async {
+  /// ✅ 3. Fetch Booking Requests for Buyer (To trace records or status updates)
+  Future<List<Map<String, dynamic>>> fetchBuyersBookingRequests() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return [];
@@ -815,13 +794,36 @@ class SupabaseService {
       final response = await _supabase
           .from('booking_requests')
           .select('*, properties(*)')
-          .eq('requester_id', user.id)
+          .eq('buyer_id', user.id)
           .order('created_at', ascending: false);
 
-      return response;
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      debugPrint('Get my booking requests error: $e');
+      debugPrint('❌ Fetch Buyer Bookings Error: $e');
       return [];
+    }
+  }
+
+  /// ✅ 4. Dynamic Status State Update (Handles Seller Approved/Reject/Pending & Buyer Cancellation)
+  Future<bool> updateBookingStatus({
+    required String bookingId,
+    required String
+    nextStatus, // 'approved', 'rejected', 'pending', 'cancelled'
+  }) async {
+    try {
+      await _supabase
+          .from('booking_requests')
+          .update({
+            'status': nextStatus,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', bookingId);
+
+      debugPrint('✅ Booking status successfully updated to: $nextStatus');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Update Booking Status Error: $e');
+      return false;
     }
   }
 }

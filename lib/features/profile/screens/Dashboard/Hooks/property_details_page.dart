@@ -14,6 +14,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   int _currentIndex = 0;
   bool _isRequesting = false;
   bool _hasRequestedBooking = false;
+  String? _currentBookingId; // Cancellation track korar id mapping pointer
 
   @override
   void initState() {
@@ -22,21 +23,34 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   }
 
   String? _getPropertyId() {
-    return (widget.property['id'] ?? widget.property['property_id'])
-        ?.toString();
+    return (widget.property['id'] ?? widget.property['property_id'])?.toString();
+  }
+
+  String? _getSellerId() {
+    return widget.property['seller_id']?.toString();
   }
 
   Future<void> _loadBookingStatus() async {
     final propertyId = _getPropertyId();
     if (propertyId == null || propertyId.isEmpty) return;
 
+    final user = _supabaseService.currentUser;
+    if (user == null) return; // User unique check log parameters fallback template
+
     try {
-      final hasRequested = await _supabaseService.hasRequestedBooking(
-        propertyId: propertyId,
-      );
-      if (mounted) {
+      // Dynamic profile trace queries mapping framework checking parameters pipeline structure logic 
+      final response = await _supabaseService.supabaseClient
+          .from('booking_requests')
+          .select('id, status')
+          .eq('property_id', propertyId)
+          .eq('buyer_id', user.id)
+          .neq('status', 'cancelled') // Cancelled status gulo consider hobe na active data validation trace e
+          .maybeSingle();
+
+      if (mounted && response != null) {
         setState(() {
-          _hasRequestedBooking = hasRequested;
+          _hasRequestedBooking = true;
+          _currentBookingId = response['id']?.toString();
         });
       }
     } catch (e) {
@@ -45,15 +59,24 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   }
 
   Future<void> _requestBooking() async {
-    debugPrint("Full Property Data Received: ${widget.property}");
-
-    // Try multiple possible ID keys
-    final propertyId = _getPropertyId();
-
-    if (propertyId == null || propertyId.isEmpty) {
+    final user = _supabaseService.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Error: Property ID not found. Please refresh."),
+          content: Text("Please login first to submit a booking request!"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final propertyId = _getPropertyId();
+    final sellerId = _getSellerId();
+
+    if (propertyId == null || propertyId.isEmpty || sellerId == null || sellerId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error: Operational metadata mapping profile details trace failed."),
           backgroundColor: Colors.red,
         ),
       );
@@ -77,6 +100,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             child: const Text("Yes, Request"),
           ),
         ],
@@ -85,40 +109,84 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
 
     if (shouldProceed != true) return;
 
-    if (_hasRequestedBooking) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You have already requested booking for this property'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isRequesting = true);
 
     try {
-      final success = await _supabaseService.requestBooking(
+      final success = await _supabaseService.createBookingRequest(
         propertyId: propertyId,
-        message: "I am interested in this property. Please contact me.",
+        sellerId: sellerId,
       );
+      
       if (success && mounted) {
-        setState(() {
-          _hasRequestedBooking = true;
-        });
-
-        if (success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("✅ Booking Request Sent Successfully!"),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } 
+        await _loadBookingStatus(); // Id pointer structural data state dynamically pulling tracking matrix
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("✅ Booking Request Sent Successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isRequesting = false);
+    }
+  }
+
+  Future<void> _cancelBooking() async {
+    if (_currentBookingId == null) return;
+
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Cancel Booking Request"),
+        content: const Text(
+          "Are you sure you want to cancel your booking request for this property?",
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("No"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Yes, Cancel Request"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldProceed != true) return;
+
+    setState(() => _isRequesting = true);
+
+    try {
+      final success = await _supabaseService.updateBookingStatus(
+        bookingId: _currentBookingId!,
+        nextStatus: 'cancelled',
+      );
+
+      if (success && mounted) {
+        setState(() {
+          _hasRequestedBooking = false;
+          _currentBookingId = null;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("🔴 Booking Request Cancelled Successfully."),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Cancellation Failed: $e"), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _isRequesting = false);
@@ -149,8 +217,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     final String location = widget.property['location'] ?? 'No Location';
     final String price = widget.property['price']?.toString() ?? '0';
     final String listingType = widget.property['listing_type'] ?? '';
-    final String description =
-        widget.property['description'] ?? 'No description available.';
+    final String description = widget.property['description'] ?? 'No description available.';
     final String propertyType = widget.property['property_type'] ?? 'Property';
 
     return Scaffold(
@@ -167,21 +234,16 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       ? Image.network(
                           images[_currentIndex],
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.broken_image, size: 100),
+                          errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 100),
                         )
                       : Container(
                           color: Colors.grey[300],
                           child: const Icon(Icons.image, size: 100),
                         ),
                 ),
-
                 if (images.length > 1)
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                     child: SizedBox(
                       height: 85,
                       child: ListView.builder(
@@ -194,9 +256,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                               margin: const EdgeInsets.only(right: 10),
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: _currentIndex == index
-                                      ? Colors.green
-                                      : Colors.transparent,
+                                  color: _currentIndex == index ? Colors.green : Colors.transparent,
                                   width: 3,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
@@ -216,7 +276,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       ),
                     ),
                   ),
-
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
                   child: Column(
@@ -258,16 +317,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                           Expanded(
                             child: Text(
                               location,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 16,
-                              ),
+                              style: const TextStyle(color: Colors.grey, fontSize: 16),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 25),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
@@ -292,14 +347,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                             ),
                         ],
                       ),
-
                       const SizedBox(height: 35),
                       const Text(
                         "Description",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -312,40 +363,33 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
               ],
             ),
           ),
-
           Positioned(
             bottom: 20,
             left: 20,
             right: 20,
             child: ElevatedButton(
-              onPressed: (_isRequesting || _hasRequestedBooking)
+              onPressed: _isRequesting
                   ? null
-                  : _requestBooking,
+                  : (_hasRequestedBooking ? _cancelBooking : _requestBooking),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _hasRequestedBooking
-                    ? Colors.grey
-                    : Colors.green[700],
+                backgroundColor: _hasRequestedBooking ? Colors.red[700] : Colors.green[700],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 8,
               ),
               child: _isRequesting
-                  ? const CircularProgressIndicator(color: Colors.white)
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
                   : Text(
-                      _hasRequestedBooking
-                          ? "Requested Already"
-                          : "Request for Booking",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      _hasRequestedBooking ? "Cancel the Booking" : "Request for Booking",
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
             ),
           ),
-
           Positioned(
             top: 50,
             left: 20,

@@ -23,7 +23,8 @@ import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/Bids_
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/seller_bid_history_screen.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
-import 'features/profile/screens/Dashboard/Sller_Dashboard/SellerBookingRequestsScreen.dart';
+import 'features/profile/screens/Dashboard/Sller_Dashboard/SellerBookingRequestsPage.dart';
+
 import 'features/profile/screens/Dashboard/Hooks/favorite.dart';
 
 // Profile Screens
@@ -84,7 +85,7 @@ class EstateXApp extends StatelessWidget {
 
         '/favorites': (context) => const FavoritePage(),
         '/seller-bid-history': (context) => const SellerBidHistoryScreen(),
-        '/seller-booking-requests': (context) => const SellerBookingRequestsScreen(),
+        '/seller-booking-requests': (context) => const SellerBookingRequestsPage(),
       },
     );
   }
