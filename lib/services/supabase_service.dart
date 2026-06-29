@@ -965,26 +965,29 @@ class SupabaseService {
     }
   }
 
-  Future<List<dynamic>> getAllProperties() async {
+    Future<List<dynamic>> getAllProperties() async {
     try {
       final response = await _supabase
           .from('properties')
-          .select('*, profiles!seller_id(full_name)')
+          .select('*, profiles!seller_id(full_name, avatar_url)')
           .order('created_at', ascending: false);
       return response;
     } catch (e) {
+      debugPrint('❌ Get all properties error: $e');
       return [];
     }
   }
 
-  Future<List<dynamic>> getAllBidProperties() async {
+    Future<List<dynamic>> getAllBidProperties() async {
     try {
       final response = await _supabase
           .from('bid_properties')
           .select('*, profiles!seller_id(full_name, avatar_url)')
           .order('created_at', ascending: false);
+      debugPrint("✅ Fetched ${response.length} bid properties");
       return response;
     } catch (e) {
+      debugPrint('❌ Get all bid properties error: $e');
       return [];
     }
   }
@@ -999,8 +1002,10 @@ class SupabaseService {
             properties(id, title, location, price, image_urls)
           ''')
           .order('created_at', ascending: false);
+      debugPrint("✅ Fetched ${response.length} booking requests");
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
+      debugPrint('❌ Get all booking requests error: $e');
       return [];
     }
   }

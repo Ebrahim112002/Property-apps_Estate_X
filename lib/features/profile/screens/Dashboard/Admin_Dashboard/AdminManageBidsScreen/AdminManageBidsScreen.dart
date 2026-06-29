@@ -16,16 +16,21 @@ class _AdminManageBidsScreenState extends State<AdminManageBidsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    _fetchBidProperties();
   }
 
-  Future<void> _fetchData() async {
+  Future<void> _fetchBidProperties() async {
     setState(() => _isLoading = true);
-    final data = await _supabaseService.getAllBidProperties();
-    setState(() {
-      bidProperties = data;
-      _isLoading = false;
-    });
+    try {
+      final data = await _supabaseService.getAllBidProperties();
+      setState(() {
+        bidProperties = data;
+      });
+    } catch (e) {
+      debugPrint('Error fetching bids: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -37,29 +42,41 @@ class _AdminManageBidsScreenState extends State<AdminManageBidsScreen> {
           : bidProperties.isEmpty
               ? const Center(child: Text("No bid properties found"))
               : ListView.builder(
+                  padding: const EdgeInsets.all(12),
                   itemCount: bidProperties.length,
                   itemBuilder: (context, index) {
                     final p = bidProperties[index];
                     final seller = p['profiles'] ?? {};
+                    final imageUrls = p['image_urls'] as List? ?? [];
+
                     return Card(
-                      margin: const EdgeInsets.all(12),
-                      child: ListTile(
-                        leading: p['image_urls'] != null && (p['image_urls'] as List).isNotEmpty
-                            ? Image.network((p['image_urls'] as List).first, width: 70, height: 70, fit: BoxFit.cover)
-                            : const Icon(Icons.gavel, size: 50),
-                        title: Text(p['title'] ?? 'No Title'),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Seller: ${seller['full_name'] ?? 'Unknown'}"),
-                            Text("Highest Bid: ৳${p['current_highest_bid']}"),
-                            Text("Status: ${p['is_active'] == true ? 'Active' : 'Closed'}"),
-                          ],
-                        ),
-                        trailing: Chip(
-                          label: Text(p['is_active'] == true ? "LIVE" : "ENDED"),
-                          backgroundColor: p['is_active'] == true ? Colors.green : Colors.grey,
-                        ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            child: imageUrls.isNotEmpty
+                                ? Image.network(imageUrls.first, height: 160, width: double.infinity, fit: BoxFit.cover)
+                                : Container(height: 160, color: Colors.grey[300], child: const Icon(Icons.gavel, size: 60)),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(p['title'] ?? 'No Title', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                Text("Seller: ${seller['full_name'] ?? 'Unknown'}"),
+                                Text("Highest Bid: ৳${p['current_highest_bid'] ?? '0'}"),
+                                const SizedBox(height: 8),
+                                Chip(
+                                  label: Text(p['is_active'] == true ? "ACTIVE" : "CLOSED"),
+                                  backgroundColor: p['is_active'] == true ? Colors.green : Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
