@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../Hooks/Header.dart';           // Dynamic Header
-import '../Hooks/dashboard_cards.dart';   // যদি থাকে
+import '../../../../../services/supabase_service.dart';
+import '../Hooks/Header.dart';
 
 class BuyerDashboardHomeScreen extends StatefulWidget {
   const BuyerDashboardHomeScreen({super.key});
@@ -11,186 +11,169 @@ class BuyerDashboardHomeScreen extends StatefulWidget {
 }
 
 class _BuyerDashboardHomeScreenState extends State<BuyerDashboardHomeScreen> {
-  int savedProperties = 18;
+  final _supabaseService = SupabaseService();
+
+  int savedProperties = 0;
   int totalInquiries = 12;
   int propertiesViewed = 47;
   int totalNotifications = 8;
+  int totalBookingRequests = 0;
 
-  Key headerKey = UniqueKey();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final user = _supabaseService.currentUser;
+      if (user == null) return;
+
+      // Real Data Fetch
+      final bookingRequests = await _supabaseService.fetchBuyersBookingRequests();
+
+      setState(() {
+        totalBookingRequests = bookingRequests.length;
+        savedProperties = 18; // Default value
+
+        // Static for now
+        totalInquiries = 12;
+        propertiesViewed = 47;
+        totalNotifications = 8;
+      });
+    } catch (e) {
+      debugPrint('Error loading buyer dashboard data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            setState(() => headerKey = UniqueKey());
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Dynamic Header
-                DashboardHeader(
-                  key: headerKey,
-                  title: "Buyer Dashboard",
-                  role: "Buyer",
-                  profileRoute: '/buyer-profile',
-                ),
-                const SizedBox(height: 24),
-
-                // Quick Actions
-                const Text(
-                  "Quick Actions",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                const BuyerDashboardQuickActions(),
-                const SizedBox(height: 28),
-
-                // Statistics
-                BuyerDashboardStatsGrid(
-                  savedProperties: savedProperties,
-                  totalInquiries: totalInquiries,
-                  propertiesViewed: propertiesViewed,
-                  totalNotifications: totalNotifications,
-                ),
-                const SizedBox(height: 28),
-
-                // Recommended Properties
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      backgroundColor: const Color(0xFFF4F6F9),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ১. FIXED: Apnar ashol correct parameters shoho DashboardHeader design call
+                    DashboardHeader(
+                      key: UniqueKey(),
+                      title: "Buyer Dashboard",
+                      role: "Buyer",
+                      profileRoute: '/buyer-profile',
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Welcome Text
                     const Text(
-                      "Recommended For You",
+                      "Buyer Overview",
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/all-properties'),
-                      child: const Text("View All"),
+                    const SizedBox(height: 16),
+
+                    // Stats Grid Layout
+                    _buildStatsGrid(),
+                    const SizedBox(height: 16),
+
+                    // ==================== MY BIDS HISTORY CARD FOR BUYER ====================
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, '/my-bids-history'),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF2193b0), Color(0xFF6dd5ed)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.history_edu_rounded, color: Colors.white, size: 28),
+                            SizedBox(width: 12),
+                            Text(
+                              "My Bids History",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 16,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Spacer(),
+                            Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Recent Activity Title (Main Design e jemon chilo)
+                    const Text(
+                      "Recent Saved Properties",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Placeholder Main Design content intact rakha hoyeche
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "No recently viewed items",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _buildRecommendedProperties(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecommendedProperties() {
-    return Column(
-      children: List.generate(3, (index) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          elevation: 3,
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(14),
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.network(
-                "https://picsum.photos/id/${200 + index}/200",
-                width: 78,
-                height: 78,
-                fit: BoxFit.cover,
               ),
             ),
-            title: const Text(
-              "Modern 3 Bedroom Apartment",
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Banani, Dhaka"),
-                Text(
-                  "৳ 85,00,000 • For Sale",
-                  style: TextStyle(color: Colors.green),
-                ),
-              ],
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 20),
-            onTap: () => Navigator.pushNamed(context, '/property-details'),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-// ==================== Buyer Quick Actions & Stats (আগের মতোই) ====================
-
-class BuyerDashboardQuickActions extends StatelessWidget {
-  const BuyerDashboardQuickActions({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 14,
-      mainAxisSpacing: 14,
-      childAspectRatio: 1.6,
-      children: [
-        _buildActionButton(Icons.search, "Browse Properties", Colors.blue, () => Navigator.pushNamed(context, '/all-properties')),
-        _buildActionButton(Icons.favorite_border, "Saved Properties", Colors.pink, () => Navigator.pushNamed(context, '/saved-properties')),
-        _buildActionButton(Icons.question_answer_outlined, "My Inquiries", Colors.teal, () => Navigator.pushNamed(context, '/my-inquiries')),
-        _buildActionButton(Icons.notifications_outlined, "Notifications", Colors.orange, () => Navigator.pushNamed(context, '/notifications')),
-      ],
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.2)),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(label, textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600, color: color, fontSize: 14)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class BuyerDashboardStatsGrid extends StatelessWidget {
-  final int savedProperties;
-  final int totalInquiries;
-  final int propertiesViewed;
-  final int totalNotifications;
-
-  const BuyerDashboardStatsGrid({
-    super.key,
-    required this.savedProperties,
-    required this.totalInquiries,
-    required this.propertiesViewed,
-    required this.totalNotifications,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  // ==================== STATS GRID WIDGET ====================
+  Widget _buildStatsGrid() {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -199,30 +182,83 @@ class BuyerDashboardStatsGrid extends StatelessWidget {
       mainAxisSpacing: 14,
       childAspectRatio: 1.65,
       children: [
-        _buildStatCard("Saved", savedProperties.toString(), Icons.favorite, Colors.pink),
-        _buildStatCard("Inquiries", totalInquiries.toString(), Icons.question_answer, Colors.teal),
-        _buildStatCard("Viewed", propertiesViewed.toString(), Icons.visibility, Colors.blue),
-        _buildStatCard("Notifications", totalNotifications.toString(), Icons.notifications, Colors.orange),
+        _buildStatCard(
+          "Saved",
+          savedProperties.toString(),
+          Icons.favorite_border_rounded,
+          Colors.blue,
+          onTap: () => Navigator.pushNamed(context, '/favorites'),
+        ),
+        _buildStatCard(
+          "Inquiries",
+          totalInquiries.toString(),
+          Icons.chat_bubble_outline_rounded,
+          Colors.orange,
+        ),
+        _buildStatCard(
+          "Viewed",
+          propertiesViewed.toString(),
+          Icons.visibility_outlined,
+          Colors.purple,
+        ),
+        // ২. FIXED: Booking Requests card-ti grid-e shundor kore thakbe (duplicate bad deya hoyeche)
+        _buildStatCard(
+          "Booking Requests",
+          totalBookingRequests.toString(),
+          Icons.request_page_outlined,
+          Colors.teal,
+          onTap: () => Navigator.pushNamed(context, '/buyer-booking-requests'),
+        ),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 6))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 30),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-          Text(title, style: TextStyle(fontSize: 13.5, color: Colors.grey[700])),
-        ],
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 30),
+            const Spacer(),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              title,
+              style: TextStyle(fontSize: 13.5, color: Colors.grey[700]),
+            ),
+            if (title == "Saved" || title == "Booking Requests")
+              const Text(
+                "Tap to view",
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.teal,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

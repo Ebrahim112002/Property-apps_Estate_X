@@ -17,6 +17,13 @@ import 'features/home/ALl _properties/Bid_properties/all_bid_properties.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
 // buyer dashboard
 import 'features/profile/screens/Dashboard/Buyer_dashboard/Buyer_dashboard_home_screen.dart';
+// admin folder
+import 'features/profile/screens/Dashboard/Admin_Dashboard/admin_dashboard_home_screen.dart';
+import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminBookingRequestsScreen/AdminBookingRequestsScreen.dart';
+import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManageBidsScreen/AdminManageBidsScreen.dart';
+import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManageUsersScreen/AdminManageUsersScreen.dart';
+import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManagePropertiesScreen/AdminManagePropertiesScreen.dart';
+
 
 // post bids
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/Bids_post.dart';
@@ -24,6 +31,8 @@ import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bi
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/seller_bid_history_screen.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/SellerBookingRequestsPage.dart';
+import 'features/profile/screens/Dashboard/Buyer_dashboard/Booking/BuyerBookingRequestsPage.dart';
+import 'features/profile/screens/Dashboard/Buyer_dashboard/Booking/BuyerBid/BuyerBid.dart';
 
 import 'features/profile/screens/Dashboard/Hooks/favorite.dart';
 
@@ -85,7 +94,22 @@ class EstateXApp extends StatelessWidget {
 
         '/favorites': (context) => const FavoritePage(),
         '/seller-bid-history': (context) => const SellerBidHistoryScreen(),
-        '/seller-booking-requests': (context) => const SellerBookingRequestsPage(),
+        '/seller-booking-requests': (context) =>
+            const SellerBookingRequestsPage(),
+        '/buyer-booking-requests': (context) =>
+            const BuyerBookingRequestsPage(),
+        '/my-bids-history': (context) => const BuyerBidScreen(),
+        '/admin-dashboard': (context) => const AdminDashboardHomeScreen(),
+
+        // Add these routes
+        '/admin-manage-users': (context) =>
+            const AdminManageUsersScreen(), // You will create this
+        '/admin-manage-properties': (context) =>
+            const AdminManagePropertiesScreen(),
+        '/admin-manage-bids': (context) => const AdminManageBidsScreen(),
+        '/admin-booking-requests': (context) =>
+            const AdminBookingRequestsScreen(),
+        '/admin-profile': (context) => const AdminProfileScreen(),
       },
     );
   }

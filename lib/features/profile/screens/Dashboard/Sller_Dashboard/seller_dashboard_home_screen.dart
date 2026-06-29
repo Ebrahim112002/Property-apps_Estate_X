@@ -95,6 +95,7 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                     activeListings: activeListings,
                     totalBids: totalBids,
                     totalFavorites: totalInterested,
+                    totalBookingRequests: 0, // পরে যোগ করবেন
                   ),
 
                 const SizedBox(height: 28),

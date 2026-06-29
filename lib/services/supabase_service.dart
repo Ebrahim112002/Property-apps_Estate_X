@@ -826,4 +826,183 @@ class SupabaseService {
       return false;
     }
   }
+  // ─────────────────────────────────────────
+  // BUYER - MY BIDS
+  // ─────────────────────────────────────────
+
+  /// Fetch all bids placed by current buyer
+  Future<List<Map<String, dynamic>>> fetchMyBids() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return [];
+
+      final response = await _supabase
+          .from('bids')
+          .select('''
+            id,
+            bid_amount,
+            created_at,
+            bid_property_id,
+            bid_properties!bid_property_id (
+              id, 
+              title, 
+              location, 
+              base_price,
+              current_highest_bid,
+              image_urls,
+              end_time,
+              is_active
+            )
+          ''')
+          .eq('bidder_id', user.id)
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('❌ Fetch My Bids Error: $e');
+      return [];
+    }
+  }
+
+  Future<int> getMyBidsCount() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return 0;
+
+      final response = await _supabase
+          .from('bids')
+          .select('id')
+          .eq('bidder_id', user.id);
+
+      return (response as List).length;
+    } catch (e) {
+      debugPrint('❌ Get My Bids Count Error: $e');
+      return 0;
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // ALL BID HISTORY FOR PUBLIC / BUYER / ADMIN
+  // ─────────────────────────────────────────
+
+  /// নির্দিষ্ট একটি প্রপার্টির সম্পূর্ণ বিড হিস্ট্রি নিয়ে আসে (সবাই দেখতে পারবে)
+  Future<List<dynamic>> getAllBidHistoryForProperty({
+    required String bidPropertyId,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('bids')
+          .select('*, profiles!bidder_id(full_name, avatar_url, email)')
+          .eq('bid_property_id', bidPropertyId)
+          .order('bid_amount', ascending: false); // সর্বোচ্চ বিড আগে দেখাবে
+
+      return response;
+    } catch (e) {
+      debugPrint('Get all bid history error: $e');
+      return [];
+    }
+  }
+    // ===================== ADMIN METHODS =====================
+
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select('*, buyer_profiles(*), seller_profiles(*)')
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('Get all users error: $e');
+      return [];
+    }
+  }
+
+  Future<bool> updateUserRole(String userId, String newRole) async {
+    try {
+      await _supabase.from('profiles').update({
+        'role': newRole,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> toggleUserBan(String userId, bool isBanned) async {
+    try {
+      await _supabase.from('profiles').update({
+        'is_active': !isBanned,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteUserAccount(String userId) async {
+    try {
+      await _supabase.from('profiles').delete().eq('id', userId);
+      await _supabase.from('buyer_profiles').delete().eq('id', userId);
+      await _supabase.from('seller_profiles').delete().eq('id', userId);
+      // Optional: Delete auth user (needs service role)
+      return true;
+    } catch (e) {
+      debugPrint('Delete user error: $e');
+      return false;
+    }
+  }
+    // Delete Property (Admin)
+  Future<bool> deleteProperty(String propertyId) async {
+    try {
+      await _supabase.from('properties').delete().eq('id', propertyId);
+      debugPrint('✅ Property deleted successfully');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Delete property error: $e');
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> getAllProperties() async {
+    try {
+      final response = await _supabase
+          .from('properties')
+          .select('*, profiles!seller_id(full_name)')
+          .order('created_at', ascending: false);
+      return response;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getAllBidProperties() async {
+    try {
+      final response = await _supabase
+          .from('bid_properties')
+          .select('*, profiles!seller_id(full_name, avatar_url)')
+          .order('created_at', ascending: false);
+      return response;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllBookingRequests() async {
+    try {
+      final response = await _supabase
+          .from('booking_requests')
+          .select('''
+            *,
+            profiles!buyer_id(full_name, avatar_url, email),
+            properties(id, title, location, price, image_urls)
+          ''')
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
 }
+

@@ -53,6 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.pushNamed(context, '/all-properties');
       return; 
     }
+    if (index == 2) {
+      // বটম নেভিগেশন বারের ২ নম্বর ইডেক্স (হার্ট/ফেভারিট আইকন)-এ ক্লিক করলেও এটি কাজ করবে
+      Navigator.pushNamed(context, '/favorites');
+      return;
+    }
     if (index == 3) {
       final user = _supabaseService.currentUser;
       if (user == null) {
@@ -66,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (role == 'seller') {
             Navigator.pushNamed(context, '/seller-dashboard');
           } else if (role == 'admin') {
-            Navigator.pushNamed(context, '/admin-profile');
+            Navigator.pushNamed(context, '/admin-dashboard');
           } else if (role == 'buyer') {
             Navigator.pushNamed(context, '/buyer-dashboard');
           } else {
@@ -161,10 +166,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // হেডার
+                      // হেডার (ডানপাশে লাভ বাটন যুক্ত করা হয়েছে)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                        child: HomeHeader(onAvatarTap: () => _onItemTapped(3)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: HomeHeader(onAvatarTap: () => _onItemTapped(3)),
+                            ),
+                            // ==================== নতুন FAVORITE / LOVE ICON ACTION ====================
+                            IconButton(
+                              icon: const Icon(
+                                Icons.favorite_border_rounded,
+                                color: Colors.white,
+                                size: 26,
+                              ),
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/favorites');
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 20),
 
@@ -191,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // সাদা সেকশন - কন্টেন্ট এরিয়া
+                      // কন্টেন্ট এরিয়া
                       Container(
                         width: double.infinity,
                         decoration: const BoxDecoration(
@@ -274,20 +297,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final allProperties = snapshot.data!;
 
-    // 👈 তোমার নতুন ডেটা মডেল ফিল্ড অনুযায়ী ফিল্টারিং সিঙ্ক করা হলো
     final displayProperties = allProperties.where((property) {
-      // ১. সার্চ ম্যাচিং (Title অথবা Location)
       final titleMatch = property.title.toLowerCase().contains(_searchQuery.toLowerCase());
       final locationMatch = property.location.toLowerCase().contains(_searchQuery.toLowerCase());
       final textMatches = titleMatch || locationMatch;
 
-      // ২. প্রোপার্টি টাইপ ফিল্টার (Rent / Sell)
-      // নোট: তোমার মডেল ভ্যারিয়েবল 'listingType' বা অনুরূপ ফিল্ড থাকলে সেটার সাথে ম্যাচ করবে
       final typeMatches = selectedType == 'Any type' || 
           property.listingType.toLowerCase() == selectedType.toLowerCase();
 
-      // ৩. ক্যাটাগরি ফিল্টার (Flat / Commercial / Land)
-      // নোট: তোমার মডেল ভ্যারিয়েবল 'propertyType' বা অনুরূপ ফিল্ড থাকলে সেটার সাথে ম্যাচ করবে
       final categoryMatches = selectedFilter == 'Any type' || 
           property.propertyType.toLowerCase() == selectedFilter.toLowerCase();
 
