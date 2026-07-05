@@ -902,7 +902,8 @@ class SupabaseService {
       return [];
     }
   }
-    // ===================== ADMIN METHODS =====================
+
+  // ===================== ADMIN METHODS =====================
 
   Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
@@ -919,10 +920,13 @@ class SupabaseService {
 
   Future<bool> updateUserRole(String userId, String newRole) async {
     try {
-      await _supabase.from('profiles').update({
-        'role': newRole,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', userId);
+      await _supabase
+          .from('profiles')
+          .update({
+            'role': newRole,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', userId);
       return true;
     } catch (e) {
       return false;
@@ -931,10 +935,13 @@ class SupabaseService {
 
   Future<bool> toggleUserBan(String userId, bool isBanned) async {
     try {
-      await _supabase.from('profiles').update({
-        'is_active': !isBanned,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', userId);
+      await _supabase
+          .from('profiles')
+          .update({
+            'is_active': !isBanned,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', userId);
       return true;
     } catch (e) {
       return false;
@@ -953,7 +960,8 @@ class SupabaseService {
       return false;
     }
   }
-    // Delete Property (Admin)
+
+  // Delete Property (Admin)
   Future<bool> deleteProperty(String propertyId) async {
     try {
       await _supabase.from('properties').delete().eq('id', propertyId);
@@ -965,20 +973,8 @@ class SupabaseService {
     }
   }
 
-    Future<List<dynamic>> getAllProperties() async {
-    try {
-      final response = await _supabase
-          .from('properties')
-          .select('*, profiles!seller_id(full_name, avatar_url)')
-          .order('created_at', ascending: false);
-      return response;
-    } catch (e) {
-      debugPrint('❌ Get all properties error: $e');
-      return [];
-    }
-  }
 
-    Future<List<dynamic>> getAllBidProperties() async {
+  Future<List<dynamic>> getAllBidProperties() async {
     try {
       final response = await _supabase
           .from('bid_properties')
@@ -1009,5 +1005,60 @@ class SupabaseService {
       return [];
     }
   }
-}
 
+  // ─────────────────────────────────────────
+  // PROPERTIES — ADMIN UPDATED METHODS
+  // ─────────────────────────────────────────
+
+  // প্রপার্টির সাথে সেলারের নাম, প্রোফাইল পিকচার এবং ইমেইল একসাথে তুলে আনার জন্য মেথড
+ Future<List<dynamic>> getAllProperties() async {
+    try {
+      final response = await _supabase
+          .from('properties')
+          .select('*, profiles!seller_id(full_name, avatar_url, email, role)')
+          .order('created_at', ascending: false);
+      return response;
+    } catch (e) {
+      debugPrint('❌ Get all properties error: $e');
+      return [];
+    }
+  }
+
+  // অ্যাডমিন প্যানেল থেকে নতুন প্রপার্টি সরাসরি ডেটাবেজে ইনসার্ট করার জন্য
+  Future<bool> createPropertyAdmin(Map<String, dynamic> data) async {
+    try {
+      await _supabase.from('properties').insert({
+        'seller_id': data['seller_id'],
+        'title': data['title'],
+        'location': data['location'],
+        'description': data['description'],
+        'price': data['price'],
+        'property_type': data['property_type'],
+        'image_urls': data['image_urls'] ?? [],
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('❌ Admin Create Property Error: $e');
+      return false;
+    }
+  }
+
+  // অ্যাডমিন প্যানেল থেকে বিদ্যমান প্রপার্টি আপডেট করার জন্য
+  Future<bool> updatePropertyAdmin(String propertyId, Map<String, dynamic> data) async {
+    try {
+      await _supabase.from('properties').update({
+        'title': data['title'],
+        'location': data['location'],
+        'description': data['description'],
+        'price': data['price'],
+        'property_type': data['property_type'],
+        'image_urls': data['image_urls'] ?? [],
+      }).eq('id', propertyId);
+      return true;
+    } catch (e) {
+      debugPrint('❌ Admin Update Property Error: $e');
+      return false;
+    }
+  }
+}
