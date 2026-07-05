@@ -961,23 +961,6 @@ class SupabaseService {
     }
   }
 
-
-
-
-  Future<List<dynamic>> getAllBidProperties() async {
-    try {
-      final response = await _supabase
-          .from('bid_properties')
-          .select('*, profiles!seller_id(full_name, avatar_url)')
-          .order('created_at', ascending: false);
-      debugPrint("✅ Fetched ${response.length} bid properties");
-      return response;
-    } catch (e) {
-      debugPrint('❌ Get all bid properties error: $e');
-      return [];
-    }
-  }
-
   Future<List<Map<String, dynamic>>> getAllBookingRequests() async {
     try {
       final response = await _supabase
@@ -1064,6 +1047,46 @@ class SupabaseService {
       return false;
     }
   }
-
   
+  // প্রপার্টির সাথে সেলার প্রোফাইল ডাটা আনার ফিক্সড মেথড
+  Future<List<dynamic>> getAllBidProperties() async {
+    try {
+      final response = await _supabase
+          .from('bid_properties')
+          .select('*, profiles!seller_id(full_name, avatar_url, email, role)')
+          .order('created_at', ascending: false);
+      debugPrint("✅ Fetched ${response.length} bid properties");
+      return response;
+    } catch (e) {
+      debugPrint('❌ Get all bid properties error: $e');
+      return [];
+    }
+  }
+
+  // Admin Update Bid Property (UUID String-ভিত্তিক)
+  Future<bool> updateBidPropertyAdmin(String id, Map<String, dynamic> data) async {
+    try {
+      await _supabase
+          .from('bid_properties')
+          .update({...data, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', id);
+      debugPrint('✅ Bid Property Updated by Admin');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Admin Update Bid Property Error: $e');
+      return false;
+    }
+  }
+
+  // Admin Delete Bid Property
+  Future<bool> deleteBidPropertyAdmin(String id) async {
+    try {
+      await _supabase.from('bid_properties').delete().eq('id', id);
+      debugPrint('✅ Bid Property Deleted by Admin');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Admin Delete Bid Property Error: $e');
+      return false;
+    }
+  }
 }
