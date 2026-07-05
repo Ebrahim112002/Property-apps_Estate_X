@@ -961,17 +961,7 @@ class SupabaseService {
     }
   }
 
-  // Delete Property (Admin)
-  Future<bool> deleteProperty(String propertyId) async {
-    try {
-      await _supabase.from('properties').delete().eq('id', propertyId);
-      debugPrint('✅ Property deleted successfully');
-      return true;
-    } catch (e) {
-      debugPrint('❌ Delete property error: $e');
-      return false;
-    }
-  }
+
 
 
   Future<List<dynamic>> getAllBidProperties() async {
@@ -1023,6 +1013,19 @@ class SupabaseService {
       return [];
     }
   }
+  Future<bool> deleteProperty(dynamic propertyId) async {
+    try {
+      // ID যদি int হয় তবে int-এ কনভার্ট করবে, নাহলে string/uuid রাখবে
+      final targetId = int.tryParse(propertyId.toString()) ?? propertyId;
+      
+      await _supabase.from('properties').delete().eq('id', targetId);
+      debugPrint('✅ Property deleted successfully from DB');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Delete property error: $e');
+      return false;
+    }
+  }
 
   // অ্যাডমিন প্যানেল থেকে নতুন প্রপার্টি সরাসরি ডেটাবেজে ইনসার্ট করার জন্য
   Future<bool> createPropertyAdmin(Map<String, dynamic> data) async {
@@ -1061,4 +1064,6 @@ class SupabaseService {
       return false;
     }
   }
+
+  
 }
