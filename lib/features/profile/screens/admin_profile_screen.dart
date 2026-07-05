@@ -105,7 +105,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     );
   }
 
-  // ────────────────────── Modern Sliver AppBar ──────────────────────
+  // ────────────────────── Modern Sliver AppBarr ──────────────────────
   Widget _buildSliverAppBar() {
     final name = _adminProfile?['full_name'] ?? 'System Admin';
     final email = _service.currentUser?.email ?? 'admin@estatex.com';
@@ -136,10 +136,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Colors.red.shade900,
-                Colors.red.shade700,
-              ],
+              colors: [Colors.red.shade900, Colors.red.shade700],
             ),
           ),
           child: SafeArea(
@@ -162,9 +159,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       ),
                     ],
                   ),
-                  child: ClipOval(
-                    child: _buildAdminAvatar(avatarUrl),
-                  ),
+                  child: ClipOval(child: _buildAdminAvatar(avatarUrl)),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -186,7 +181,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(30),
@@ -216,7 +214,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         fit: BoxFit.cover,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
         },
         errorBuilder: (_, __, ___) => _defaultAdminIcon(),
       );
@@ -245,15 +245,40 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       mainAxisSpacing: 16,
       childAspectRatio: 1.45,
       children: [
-        _buildStatTile('Total Users', _totalUsers.toString(), Icons.people_alt, Colors.blue.shade600),
-        _buildStatTile('Properties', _totalProperties.toString(), Icons.home, Colors.green.shade600),
-        _buildStatTile('Active Sellers', _totalSellers.toString(), Icons.storefront, Colors.orange.shade600),
-        _buildStatTile('Total Buyers', _totalBuyers.toString(), Icons.person_search, Colors.purple.shade600),
+        _buildStatTile(
+          'Total Users',
+          _totalUsers.toString(),
+          Icons.people_alt,
+          Colors.blue.shade600,
+        ),
+        _buildStatTile(
+          'Properties',
+          _totalProperties.toString(),
+          Icons.home,
+          Colors.green.shade600,
+        ),
+        _buildStatTile(
+          'Active Sellers',
+          _totalSellers.toString(),
+          Icons.storefront,
+          Colors.orange.shade600,
+        ),
+        _buildStatTile(
+          'Total Buyers',
+          _totalBuyers.toString(),
+          Icons.person_search,
+          Colors.purple.shade600,
+        ),
       ],
     );
   }
 
-  Widget _buildStatTile(String label, String value, IconData icon, Color color) {
+  Widget _buildStatTile(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -335,7 +360,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         children: [
           _buildInfoRow('Admin ID', uid, Icons.fingerprint_rounded),
           _buildDivider(),
-          _buildInfoRow('Access Level', 'Root Administrator', Icons.verified_user_rounded),
+          _buildInfoRow(
+            'Access Level',
+            'Root Administrator',
+            Icons.verified_user_rounded,
+          ),
           _buildDivider(),
           _buildInfoRow('Email Address', email, Icons.email_rounded),
         ],
@@ -376,12 +405,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   }
 
   Widget _buildDivider() => Divider(
-        color: Colors.grey.shade100,
-        height: 1,
-        thickness: 1,
-        indent: 20,
-        endIndent: 20,
-      );
+    color: Colors.grey.shade100,
+    height: 1,
+    thickness: 1,
+    indent: 20,
+    endIndent: 20,
+  );
 
   // Action Card (more premium look)
   Widget _buildActionCard() {
@@ -399,19 +428,44 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       ),
       child: Column(
         children: [
-          _buildActionTile('User Management', Icons.manage_accounts, Colors.blue.shade600, () {}),
+          _buildActionTile(
+            'User Management',
+            Icons.manage_accounts,
+            Colors.blue.shade600,
+            () {},
+          ),
           _buildDivider(),
-          _buildActionTile('Property Verification', Icons.verified, Colors.green.shade600, () {}),
+          _buildActionTile(
+            'Property Verification',
+            Icons.verified,
+            Colors.green.shade600,
+            () {},
+          ),
           _buildDivider(),
-          _buildActionTile('Platform Reports', Icons.analytics, Colors.orange.shade600, () {}),
+          _buildActionTile(
+            'Platform Reports',
+            Icons.analytics,
+            Colors.orange.shade600,
+            () {},
+          ),
           _buildDivider(),
-          _buildActionTile('System Settings', Icons.settings, Colors.grey.shade700, () {}),
+          _buildActionTile(
+            'System Settings',
+            Icons.settings,
+            Colors.grey.shade700,
+            () {},
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildActionTile(String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildActionTile(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       leading: Container(
