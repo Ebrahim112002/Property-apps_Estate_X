@@ -961,24 +961,79 @@ class SupabaseService {
     }
   }
 
+// ===================== ADMIN BOOKING MANAGER FULL CODE =====================
+
+  /// গ্লোবাল বুকিং রিকোয়েস্ট হিস্ট্রি ম্যানেজমেন্ট (অ্যাডমিন ভিউ)
+  /// এই মেথডটি booking_requests থেকে ডেটা নিয়ে profiles ও properties টেবিল মার্চ করে ডেটা তৈরি করে
   Future<List<Map<String, dynamic>>> getAllBookingRequests() async {
     try {
+      // ১. মূল বুকিং রিকোয়েস্ট টেবিল থেকে সমস্ত র ডেটা তুলে আনা
       final response = await _supabase
           .from('booking_requests')
-          .select('''
-            *,
-            profiles!buyer_id(full_name, avatar_url, email),
-            properties(id, title, location, price, image_urls)
-          ''')
+          .select()
           .order('created_at', ascending: false);
-      debugPrint("✅ Fetched ${response.length} booking requests");
-      return List<Map<String, dynamic>>.from(response);
+      
+      final List<dynamic> rawList = response as List<dynamic>;
+      final List<Map<String, dynamic>> structuredRequests = [];
+
+      debugPrint("📊 [Raw DB Data Check] Found ${rawList.length} rows in booking_requests table.");
+
+      // ২. লুপ চালিয়ে বায়ার আইডি, সেলার আইডি ও প্রপার্টি আইডি দিয়ে আলাদাভাবে ডেটা তুলে আনা
+      for (var booking in rawList) {
+        final Map<String, dynamic> mutableBooking = Map<String, dynamic>.from(booking);
+
+        final String? buyerId = mutableBooking['buyer_id']?.toString();
+        final String? sellerId = mutableBooking['seller_id']?.toString();
+        final String? propertyId = mutableBooking['property_id']?.toString();
+
+        // ক) বায়ারের প্রোফাইল ডাটা সংগ্রহ (profiles table)
+        Map<String, dynamic> buyerData = {'full_name': 'Unknown Buyer', 'email': 'N/A'};
+        if (buyerId != null && buyerId.isNotEmpty) {
+          final bProfile = await _supabase
+              .from('profiles')
+              .select('full_name, avatar_url, email')
+              .eq('id', buyerId)
+              .maybeSingle();
+          if (bProfile != null) buyerData = Map<String, dynamic>.from(bProfile);
+        }
+
+        // খ) সেলারের প্রোফাইল ডাটা সংগ্রহ (profiles table)
+        Map<String, dynamic> sellerData = {'full_name': 'Unknown Seller', 'email': 'N/A'};
+        if (sellerId != null && sellerId.isNotEmpty) {
+          final sProfile = await _supabase
+              .from('profiles')
+              .select('full_name, avatar_url, email')
+              .eq('id', sellerId)
+              .maybeSingle();
+          if (sProfile != null) sellerData = Map<String, dynamic>.from(sProfile);
+        }
+
+        // গ) প্রপার্টির ডাটা সংগ্রহ (properties table)
+        Map<String, dynamic> propertyData = {'title': 'Unknown Property', 'location': 'N/A', 'price': 0};
+        if (propertyId != null && propertyId.isNotEmpty) {
+          final prop = await _supabase
+              .from('properties')
+              .select('id, title, location, price, image_urls')
+              .eq('id', propertyId)
+              .maybeSingle();
+          if (prop != null) propertyData = Map<String, dynamic>.from(prop);
+        }
+
+        // ঘ) সবগুলো ডাটা একটি অবজেক্টে অ্যাডমিনের জন্য বাইন্ড করা
+        mutableBooking['buyer'] = buyerData;
+        mutableBooking['seller'] = sellerData;
+        mutableBooking['properties'] = propertyData;
+
+        structuredRequests.add(mutableBooking);
+      }
+
+      debugPrint("✅ [Admin View Sync] Successfully loaded ${structuredRequests.length} booking requests with relations.");
+      return structuredRequests;
     } catch (e) {
-      debugPrint('❌ Get all booking requests error: $e');
+      debugPrint('❌ Admin booking global fetch error: $e');
       return [];
     }
   }
-
   // ─────────────────────────────────────────
   // PROPERTIES — ADMIN UPDATED METHODS
   // ─────────────────────────────────────────
