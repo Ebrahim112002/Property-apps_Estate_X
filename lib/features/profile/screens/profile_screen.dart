@@ -62,9 +62,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     if (user == null) return _buildLoginPrompt();
 
-    // Redirect based on user role
-    return FutureBuilder<String>(
-      future: _authService.getUserRole(user.id),
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _authService.getProfile(user.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -72,11 +71,16 @@ class _ProfileScreenState extends State<ProfileScreen>
           );
         }
 
-        final role = snapshot.data ?? 'buyer';
+        final profile = snapshot.data;
+        final role = profile?['role'] ?? 'buyer';
+        final bool isBanned = profile?['banned'] == true || role == 'banned';
 
-        // Redirect to appropriate profile screen based on role
+        // Redirect based on user role and ban status
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (role == 'admin') {
+          if (isBanned) {
+            // ইউজার ব্যানড হলে সরাসরি /banned-profile রাউটে পাঠানো হচ্ছে
+            Navigator.of(context).pushReplacementNamed('/banned-profile');
+          } else if (role == 'admin') {
             Navigator.of(context).pushReplacementNamed('/admin-profile');
           } else if (role == 'seller') {
             Navigator.of(context).pushReplacementNamed('/seller-profile');
@@ -228,7 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           border: Border.all(color: Colors.white.withOpacity(0.2)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center, 
           children: [
             Image.network(
               'https://cdn1.iconfinder.com/data/icons/google-s-logo/150/Google_Icons-09-512.png',
@@ -297,7 +301,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
-        onPressed: onPressed, // এখানে লজিকটি সরাসরি বসানো হয়েছে
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: isPrimary ? Colors.white : Colors.transparent,
           elevation: 0,

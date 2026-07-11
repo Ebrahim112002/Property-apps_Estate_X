@@ -19,22 +19,36 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
-      await _authService.signIn(
+      final response = await _authService.signIn(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/profile');
+
+      if (response.user != null) {
+        // ডেটাবেজ থেকে ইউজারের প্রোফাইল নিয়ে আসা হচ্ছে
+        final profile = await _authService.getProfile(response.user!.id);
+
+        if (mounted) {
+          // ইউজার ব্যানড হলে সরাসরি আপনার বলা '/banned-profile' রাউটে চলে যাবে
+          if (profile != null && (profile['banned'] == true || profile['role'] == 'banned')) {
+            Navigator.pushReplacementNamed(context, '/banned-profile');
+            return;
+          }
+
+          // ব্যানড না হলে আগের মতোই স্বাভাবিকভাবে চলে যাবে
+          Navigator.pushReplacementNamed(context, '/profile');
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
       setState(() => _isLoading = false);
     }
   }
 
-  // LoginScreen-এর build মেথডের ভেতর এই অংশটুকু আপডেট করুন
   @override
   Widget build(BuildContext context) {
     return Scaffold(

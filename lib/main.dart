@@ -29,6 +29,7 @@ import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManageProperties
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/Bids_post.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/seller_bid_history_screen.dart';
+import 'features/profile/screens/BannedAccount/banned_account_screen.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/SellerBookingRequestsPage.dart';
 import 'features/profile/screens/Dashboard/Buyer_dashboard/Booking/BuyerBookingRequestsPage.dart';
@@ -110,6 +111,7 @@ class EstateXApp extends StatelessWidget {
         '/admin-booking-requests': (context) =>
             const AdminBookingRequestsScreen(),
         '/admin-profile': (context) => const AdminProfileScreen(),
+        '/banned-profile': (context) => const BannedAccountScreen(),
       },
     );
   }
