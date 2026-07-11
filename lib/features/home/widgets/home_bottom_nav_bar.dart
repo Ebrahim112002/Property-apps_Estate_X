@@ -57,20 +57,43 @@ class _HomeBottomNavBarState extends State<HomeBottomNavBar> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildNavItem(Icons.home_rounded, 0),           // Home
-                    _buildNavItem(Icons.search_rounded, 1),          // Search
-                    const SizedBox(width: 70),                       // Space for Auction Button
-                    _buildNavItem(Icons.favorite_rounded, 2),        // Saved / Favorites
-                    _buildNavItem(Icons.dashboard_rounded, 3),       // Dashboard (Role based)
+                    // ================= LEFT SIDE (40% Total Width) =================
+                    Expanded(
+                      flex: 4,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(child: _buildNavItem(Icons.home_rounded, 0)),
+                          Expanded(child: _buildNavItem(Icons.search_rounded, 1)),
+                        ],
+                      ),
+                    ),
+                    
+                    // ================= CENTER FIXED GAP (20% Total Width) =================
+                    // This creates an absolute physical block that forces the Bid button to be dead-center
+                    const SizedBox(width: 76),
+                    
+                    // ================= RIGHT SIDE (40% Total Width) =================
+                    // Giving the right side exactly the same visual fraction weight as the left side
+                    Expanded(
+                      flex: 4,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(child: _buildNavItem(Icons.favorite_rounded, 2)),
+                          Expanded(child: _buildNavItem(Icons.chat_bubble_rounded, 3)),
+                          Expanded(child: _buildNavItem(Icons.dashboard_rounded, 4)),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
 
-          // Neon Floating Auction Button
+          // Neon Floating Auction/Bid Button
           Positioned(
             bottom: 36,
             child: GestureDetector(
@@ -115,41 +138,41 @@ class _HomeBottomNavBarState extends State<HomeBottomNavBar> {
   Widget _buildNavItem(IconData icon, int index) {
     final bool isSelected = widget.selectedIndex == index;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => widget.onItemTapped(index),
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          height: 68,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? neonPurple : inactiveColor,
-                size: 27.5,
+    return GestureDetector(
+      onTap: () => widget.onItemTapped(index),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        alignment: Alignment.center,
+        height: 68,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? neonPurple : inactiveColor,
+              size: 26,
+            ),
+            const SizedBox(height: 6),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              height: 5,
+              width: isSelected ? 5 : 0,
+              decoration: BoxDecoration(
+                color: neonPurple,
+                shape: BoxShape.circle,
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: neonPurple.withOpacity(0.8),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        )
+                      ]
+                    : [],
               ),
-              const SizedBox(height: 6),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                height: 5,
-                width: isSelected ? 5 : 0,
-                decoration: BoxDecoration(
-                  color: neonPurple,
-                  shape: BoxShape.circle,
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: neonPurple.withOpacity(0.8),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          )
-                        ]
-                      : [],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -12,6 +12,7 @@ import 'features/home/screens/home_screen.dart';
 // all properties
 import 'features/home/ALl _properties/all_properties_view.dart';
 import 'features/home/ALl _properties/Bid_properties/all_bid_properties.dart';
+import 'features/home/Chatbot/Chatbot.dart';
 
 // Seller Dashboard
 import 'features/profile/screens/Dashboard/Sller_Dashboard/seller_dashboard_home_screen.dart';
@@ -112,6 +113,7 @@ class EstateXApp extends StatelessWidget {
             const AdminBookingRequestsScreen(),
         '/admin-profile': (context) => const AdminProfileScreen(),
         '/banned-profile': (context) => const BannedAccountScreen(),
+        '/chatbot': (context) => const ChatbotScreen(),
       },
     );
   }

@@ -54,11 +54,15 @@ class _HomeScreenState extends State<HomeScreen> {
       return; 
     }
     if (index == 2) {
-      // বটম নেভিগেশন বারের ২ নম্বর ইডেক্স (হার্ট/ফেভারিট আইকন)-এ ক্লিক করলেও এটি কাজ করবে
       Navigator.pushNamed(context, '/favorites');
       return;
     }
     if (index == 3) {
+      // চ্যাটবট আইকনে ক্লিক করলে '/chatbot' রুটে নিয়ে যাবে
+      Navigator.pushNamed(context, '/chatbot');
+      return;
+    }
+    if (index == 4) {
       final user = _supabaseService.currentUser;
       if (user == null) {
         if (mounted) Navigator.pushNamed(context, '/login');
@@ -75,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
           } else if (role == 'buyer') {
             Navigator.pushNamed(context, '/buyer-dashboard');
           } else {
-            setState(() => _selectedIndex = 3);
+            setState(() => _selectedIndex = 4);
           }
         }
       } catch (e) {
@@ -120,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(color: Colors.white),
           ),
         );
-      case 3:
+      case 4:
         return const ProfileScreen();
       default:
         return _buildHomeContent();
@@ -173,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
-                              child: HomeHeader(onAvatarTap: () => _onItemTapped(3)),
+                              child: HomeHeader(onAvatarTap: () => _onItemTapped(4)),
                             ),
                             // ==================== নতুন FAVORITE / LOVE ICON ACTION ====================
                             IconButton(
