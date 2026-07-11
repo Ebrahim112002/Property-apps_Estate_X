@@ -49,7 +49,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   final String _hfToken = dotenv.env['HF_TOKEN'] ?? '';
 
   // Hugging Face Inference Providers router (OpenAI-compatible).
-  final String _apiUrl = "https://router.huggingface.co/v1/chat/completions";
+  final String _apiUrl = dotenv.env['HF_API_URL'] ?? '';
 
   //  Upgraded to a much larger, non-gated instruct model.
   // Kimi-K2-Instruct is a ~1T-parameter MoE model with strong instruction
@@ -60,7 +60,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   //   "zai-org/GLM-4.6"
   // Avoid "-Thinking"/reasoning variants here unless you also parse and
   // strip their <think>...</think> reasoning blocks from the reply.
-  final String _model = "moonshotai/Kimi-K2-Instruct";
+  final String _model = dotenv.env['HF_MODEL'] ?? '';
 
   // 💡 Default Suggestion Questions
   final List<String> _defaultQuestions = [
