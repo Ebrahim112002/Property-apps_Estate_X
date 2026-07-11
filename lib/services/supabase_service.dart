@@ -904,7 +904,11 @@ class SupabaseService {
   }
 
   // ===================== ADMIN METHODS =====================
+// =================================────────────────────────
+  // 🟢 ONLY ADMIN METHODS (BANNED LOGIC UPDATED)
+  // =================================────────────────────────
 
+  /// সব ইউজারের প্রোফাইল ডাটা নিয়ে আসা
   Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
       final response = await _supabase
@@ -913,11 +917,12 @@ class SupabaseService {
           .order('created_at', ascending: false);
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      debugPrint('Get all users error: $e');
+      debugPrint('❌ Get all users error: $e');
       return [];
     }
   }
 
+  /// ইউজারের রোল আপডেট করা
   Future<bool> updateUserRole(String userId, String newRole) async {
     try {
       await _supabase
@@ -927,36 +932,76 @@ class SupabaseService {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', userId);
+      debugPrint('✅ User role successfully updated to: $newRole');
       return true;
     } catch (e) {
+      debugPrint('❌ Update user role error: $e');
       return false;
     }
   }
 
-  Future<bool> toggleUserBan(String userId, bool isBanned) async {
+  /// ইউজারকে Ban অথবা Unban করা (banned কলাম true/false করা)
+  Future<bool> toggleUserBan(String userId, bool isCurrentlyBanned) async {
     try {
-      await _supabase
-          .from('profiles')
-          .update({
-            'is_active': !isBanned,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId);
+      final bool nextBanState = !isCurrentlyBanned;
+
+      if (nextBanState == true) {
+        // ১. ব্যান করা হচ্ছে: বর্তমান রোলটি fetch করে previous_role এ রাখা হচ্ছে এবং রোল 'banned' হচ্ছে
+        final currentProfile = await _supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .maybeSingle();
+
+        final String currentRole = currentProfile?['role'] ?? 'buyer';
+
+        await _supabase.from('profiles').update({
+          'banned': true,
+          'previous_role': currentRole,
+          'role': 'banned',
+          'is_active': false,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', userId);
+        
+        debugPrint('⛔ User banned successfully. Role changed to banned.');
+      } else {
+        // ২. আনব্যান করা হচ্ছে: previous_role থেকে পুরনো রোল রিস্টোর করা হচ্ছে
+        final currentProfile = await _supabase
+            .from('profiles')
+            .select('previous_role')
+            .eq('id', userId)
+            .maybeSingle();
+
+        final String originalRole = currentProfile?['previous_role'] ?? 'buyer';
+
+        await _supabase.from('profiles').update({
+          'banned': false,
+          'role': originalRole,
+          'is_active': true,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', userId);
+
+        debugPrint('✅ User unbanned successfully. Restored original role: $originalRole');
+      }
       return true;
     } catch (e) {
+      debugPrint('❌ Toggle user ban error: $e');
       return false;
     }
   }
 
+  /// সম্পূর্ণ ইউজার অ্যাকাউন্ট ডিলিট করা
   Future<bool> deleteUserAccount(String userId) async {
     try {
-      await _supabase.from('profiles').delete().eq('id', userId);
+      // চাইল্ড বা রিলেটেড টেবিলের ডেটা আগে ডিলিট করা যাতে ফরেন কি এরর না আসে
       await _supabase.from('buyer_profiles').delete().eq('id', userId);
       await _supabase.from('seller_profiles').delete().eq('id', userId);
-      // Optional: Delete auth user (needs service role)
+      await _supabase.from('profiles').delete().eq('id', userId);
+      
+      debugPrint('🗑️ User deleted successfully from DB');
       return true;
     } catch (e) {
-      debugPrint('Delete user error: $e');
+      debugPrint('❌ Delete user error: $e');
       return false;
     }
   }

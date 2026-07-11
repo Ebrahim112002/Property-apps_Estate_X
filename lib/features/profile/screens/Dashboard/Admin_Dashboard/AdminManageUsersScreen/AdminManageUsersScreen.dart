@@ -20,7 +20,7 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
     _fetchUsers();
   }
 
-  // Database theke sob users data load korar jonno
+  // Database থেকে সব ইউজার ডাটা রিলোড করার মেথড
   Future<void> _fetchUsers() async {
     setState(() => _isLoading = true);
     final data = await _supabaseService.getAllUsers();
@@ -30,8 +30,10 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
     });
   }
 
-  // MODAL: User-er shob details dekhanor jonno custom dialog
+  // MODAL: ইউজারের সব ডিটেইলস দেখানোর পপআপ
   void _showUserDetailsDialog(Map<String, dynamic> user) {
+    final bool isBanned = user['banned'] ?? false;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -64,11 +66,10 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
               _buildDetailRow(Icons.badge, "Role", user['role']?.toString().toUpperCase()),
               _buildDetailRow(Icons.location_city, "City", user['city']),
               _buildDetailRow(Icons.home, "Full Address", user['full_address']),
-              _buildDetailRow(Icons.explore, "Preferred Location", user['preferred_location']),
               _buildDetailRow(
-                Icons.toggle_on, 
-                "Status", 
-                (user['is_active'] ?? true) ? "🟢 Active" : "🔴 Banned/Inactive"
+                Icons.gavel, 
+                "Ban Status", 
+                isBanned ? "🔴 BANNED (True)" : "🟢 ACTIVE (False)"
               ),
               _buildDetailRow(Icons.calendar_today, "Created At", user['created_at']),
             ],
@@ -84,7 +85,6 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
     );
   }
 
-  // Details Modal-er vitore protiti row design korar helper widget
   Widget _buildDetailRow(IconData icon, String label, dynamic value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -111,9 +111,9 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
     );
   }
 
-  // User role update korar dialog box
+  // রোল আপডেট করার ডায়ালগ বক্স
   void _showRoleChangeDialog(Map<String, dynamic> user) {
-    String selectedRole = user['role'] ?? 'buyer';
+    String selectedRole = user['role'] == 'banned' ? 'buyer' : (user['role'] ?? 'buyer');
 
     showDialog(
       context: context,
@@ -157,7 +157,6 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter by id, full_name, role, and email
     final filtered = users.where((u) {
       final id = (u['id'] ?? '').toLowerCase();
       final name = (u['full_name'] ?? '').toLowerCase();
@@ -171,17 +170,13 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text(
-          "Manage Users",
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Manage Users", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0.5,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: Column(
         children: [
-          // Search Bar Widget
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -190,16 +185,11 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
               onChanged: (val) => setState(() => searchQuery = val),
             ),
           ),
-          
-          // User List Display
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -209,21 +199,19 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final user = filtered[index];
-                          final isActive = user['is_active'] ?? true;
+                          final bool isBanned = user['banned'] ?? false;
                           final role = user['role'] ?? 'buyer';
 
                           return Card(
-                            color: isActive ? Colors.white : Colors.red[50],
+                            color: isBanned ? Colors.red[50] : Colors.white,
                             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: isActive ? Colors.blue[100] : Colors.grey[300],
-                                backgroundImage: user['avatar_url'] != null 
-                                    ? NetworkImage(user['avatar_url']) 
-                                    : null,
+                                backgroundColor: isBanned ? Colors.grey[300] : Colors.blue[100],
+                                backgroundImage: user['avatar_url'] != null ? NetworkImage(user['avatar_url']) : null,
                                 child: user['avatar_url'] == null 
-                                    ? Icon(Icons.person, color: isActive ? Colors.blue : Colors.grey) 
+                                    ? Icon(Icons.person, color: isBanned ? Colors.grey : Colors.blue) 
                                     : null,
                               ),
                               title: Row(
@@ -239,34 +227,27 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
                                   Chip(
                                     label: Text(
                                       role.toString().toUpperCase(),
-                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                                     ),
-                                    backgroundColor: Colors.blue[50],
+                                    backgroundColor: isBanned ? Colors.red : Colors.blue,
                                   )
                                 ],
                               ),
-                              subtitle: Text(
-                                user['email'] ?? 'No Email',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              subtitle: Text(user['email'] ?? 'No Email', maxLines: 1, overflow: TextOverflow.ellipsis),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Show Details Button (চোখের আইকন)
                                   IconButton(
                                     icon: const Icon(Icons.visibility, color: Colors.blueGrey),
-                                    tooltip: "Show Details",
                                     onPressed: () => _showUserDetailsDialog(user),
                                   ),
-                                  // More Actions Popup Menu
                                   PopupMenuButton<String>(
                                     onSelected: (value) async {
                                       if (value == 'role') {
                                         _showRoleChangeDialog(user);
                                       } else if (value == 'ban') {
                                         setState(() => _isLoading = true);
-                                        await _supabaseService.toggleUserBan(user['id'], isActive);
+                                        await _supabaseService.toggleUserBan(user['id'], isBanned);
                                         _fetchUsers();
                                       } else if (value == 'delete') {
                                         final confirm = await showDialog<bool>(
@@ -275,10 +256,7 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
                                             title: const Text("Delete Account?"),
                                             content: const Text("This action cannot be undone and will delete user profile history."),
                                             actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(c, false),
-                                                child: const Text("Cancel"),
-                                              ),
+                                              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("Cancel")),
                                               TextButton(
                                                 onPressed: () => Navigator.pop(c, true),
                                                 child: const Text("Delete Account", style: TextStyle(color: Colors.red)),
@@ -294,27 +272,28 @@ class _AdminManageUsersScreenState extends State<AdminManageUsersScreen> {
                                       }
                                     },
                                     itemBuilder: (context) => [
-                                      const PopupMenuItem(
-                                        value: 'role',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.edit_attributes, size: 20),
-                                            SizedBox(width: 8),
-                                            Text("Change Role"),
-                                          ],
+                                      if (!isBanned)
+                                        const PopupMenuItem(
+                                          value: 'role',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.edit, size: 20),
+                                              SizedBox(width: 8),
+                                              Text("Change Role"),
+                                            ],
+                                          ),
                                         ),
-                                      ),
                                       PopupMenuItem(
                                         value: 'ban',
                                         child: Row(
                                           children: [
                                             Icon(
-                                              isActive ? Icons.block : Icons.check_circle, 
+                                              isBanned ? Icons.check_circle : Icons.block, 
                                               size: 20, 
-                                              color: isActive ? Colors.orange : Colors.green
+                                              color: isBanned ? Colors.green : Colors.orange
                                             ),
                                             const SizedBox(width: 8),
-                                            Text(isActive ? "Ban User" : "Unban User"),
+                                            Text(isBanned ? "Unban User" : "Ban User"),
                                           ],
                                         ),
                                       ),
