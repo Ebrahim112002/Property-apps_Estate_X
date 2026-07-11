@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/app_colors.dart';
 import '../../../services/supabase_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -45,12 +46,12 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   // NOTE: This token is visible to anyone who inspects the compiled web/app
   // bundle. Before shipping publicly, move this call behind a backend
   // (e.g. a Supabase Edge Function) so the token never reaches the client.
-  final String _hfToken = "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";
+  final String _hfToken = dotenv.env['HF_TOKEN'] ?? '';
 
   // Hugging Face Inference Providers router (OpenAI-compatible).
   final String _apiUrl = "https://router.huggingface.co/v1/chat/completions";
 
-  // ✅ Upgraded to a much larger, non-gated instruct model.
+  //  Upgraded to a much larger, non-gated instruct model.
   // Kimi-K2-Instruct is a ~1T-parameter MoE model with strong instruction
   // following and tool-use quality — a solid step up from Llama-3.3-70B.
   // Other strong non-gated alternatives you can swap in:

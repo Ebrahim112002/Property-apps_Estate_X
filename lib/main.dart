@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
 
@@ -25,7 +26,6 @@ import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManageBidsScreen
 import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManageUsersScreen/AdminManageUsersScreen.dart';
 import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManagePropertiesScreen/AdminManagePropertiesScreen.dart';
 
-
 // post bids
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/Bids_post.dart';
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/my_bid_properties.dart';
@@ -50,6 +50,7 @@ import 'features/profile/screens/Dashboard/Sller_Dashboard/my_properties.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
     url: 'https://hxkokgzbeqmfdkzzeuex.supabase.co',
