@@ -73,6 +73,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   @override
   void initState() {
     super.initState();
+    debugPrint('HF_TOKEN loaded: $_hfToken');
+    debugPrint('HF_API_URL loaded: $_apiUrl');
+    debugPrint('HF_MODEL loaded: $_model');
     _typingController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -117,11 +120,13 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     if (userMessage.trim().isEmpty) return;
 
     setState(() {
-      _messages.add(_ChatMessage(
-        role: "user",
-        text: userMessage.trim(),
-        time: DateTime.now(),
-      ));
+      _messages.add(
+        _ChatMessage(
+          role: "user",
+          text: userMessage.trim(),
+          time: DateTime.now(),
+        ),
+      );
       _isLoading = true;
     });
     _messageController.clear();
@@ -159,7 +164,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       }
 
       // ✅ Expanded guidelines: tone, formatting, scope, and edge cases.
-      final String systemPrompt = """
+      final String systemPrompt =
+          """
 You are "EstateX AI", the official real estate assistant for the EstateX platform.
 Your job is to help users discover, compare, and understand properties using ONLY
 the real-time database context provided below. Never invent data that isn't here.
@@ -235,11 +241,9 @@ RESPONSE GUIDELINES:
         }
 
         setState(() {
-          _messages.add(_ChatMessage(
-            role: "bot",
-            text: botReply,
-            time: DateTime.now(),
-          ));
+          _messages.add(
+            _ChatMessage(role: "bot", text: botReply, time: DateTime.now()),
+          );
         });
       } else {
         String errorMessage =
@@ -264,12 +268,14 @@ RESPONSE GUIDELINES:
         }
 
         setState(() {
-          _messages.add(_ChatMessage(
-            role: "bot",
-            text: errorMessage,
-            time: DateTime.now(),
-            isError: true,
-          ));
+          _messages.add(
+            _ChatMessage(
+              role: "bot",
+              text: errorMessage,
+              time: DateTime.now(),
+              isError: true,
+            ),
+          );
         });
       }
     } catch (e, stackTrace) {
@@ -277,13 +283,15 @@ RESPONSE GUIDELINES:
       debugPrint("Stacktrace: $stackTrace");
 
       setState(() {
-        _messages.add(_ChatMessage(
-          role: "bot",
-          text:
-              "Failed to connect to the AI server. Please check your internet connection and try again.",
-          time: DateTime.now(),
-          isError: true,
-        ));
+        _messages.add(
+          _ChatMessage(
+            role: "bot",
+            text:
+                "Failed to connect to the AI server. Please check your internet connection and try again.",
+            time: DateTime.now(),
+            isError: true,
+          ),
+        );
       });
     } finally {
       setState(() => _isLoading = false);
@@ -306,7 +314,9 @@ RESPONSE GUIDELINES:
                   : ListView.builder(
                       controller: _scrollController,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 18),
+                        horizontal: 14,
+                        vertical: 18,
+                      ),
                       itemCount: _messages.length + (_isLoading ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index == _messages.length && _isLoading) {
@@ -342,8 +352,11 @@ RESPONSE GUIDELINES:
               color: Colors.white.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.apartment_rounded,
-                color: Colors.white, size: 22),
+            child: const Icon(
+              Icons.apartment_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Column(
@@ -406,16 +419,20 @@ RESPONSE GUIDELINES:
               color: AppColors.primary.withOpacity(0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.chat_bubble_rounded,
-                size: 38, color: AppColors.primary),
+            child: Icon(
+              Icons.chat_bubble_rounded,
+              size: 38,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(height: 18),
           Text(
             "Welcome to EstateX AI Assistant",
             style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800]),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
           ),
           const SizedBox(height: 8),
           Padding(
@@ -423,7 +440,11 @@ RESPONSE GUIDELINES:
             child: Text(
               "Ask about verified listings, pricing, locations, or active bidding — I'll answer using live data from EstateX.",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey[500], height: 1.4),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+                height: 1.4,
+              ),
             ),
           ),
           const SizedBox(height: 26),
@@ -442,11 +463,14 @@ RESPONSE GUIDELINES:
                       onTap: () => _sendMessage(question),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                              color: AppColors.primary.withOpacity(0.15)),
+                            color: AppColors.primary.withOpacity(0.15),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.03),
@@ -457,15 +481,20 @@ RESPONSE GUIDELINES:
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.auto_awesome_rounded,
-                                size: 16, color: AppColors.primary),
+                            Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 question,
                                 textAlign: TextAlign.left,
                                 style: TextStyle(
-                                    color: Colors.grey[800], fontSize: 13.5),
+                                  color: Colors.grey[800],
+                                  fontSize: 13.5,
+                                ),
                               ),
                             ),
                           ],
@@ -508,8 +537,9 @@ RESPONSE GUIDELINES:
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!isUser) ...[
             _buildAvatar(false, isError: isError),
@@ -517,14 +547,18 @@ RESPONSE GUIDELINES:
           ],
           Flexible(
             child: Column(
-              crossAxisAlignment:
-                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: isUser
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 Container(
                   constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.72),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
+                    maxWidth: MediaQuery.of(context).size.width * 0.72,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 15,
+                    vertical: 11,
+                  ),
                   decoration: BoxDecoration(
                     color: isUser
                         ? AppColors.primary
@@ -570,10 +604,7 @@ RESPONSE GUIDELINES:
               ],
             ),
           ),
-          if (isUser) ...[
-            const SizedBox(width: 8),
-            _buildAvatar(true),
-          ],
+          if (isUser) ...[const SizedBox(width: 8), _buildAvatar(true)],
         ],
       ),
     );
@@ -612,7 +643,8 @@ RESPONSE GUIDELINES:
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(3, (i) {
                     final t = (_typingController.value + (i * 0.2)) % 1.0;
-                    final scale = 0.6 + (0.4 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0));
+                    final scale =
+                        0.6 + (0.4 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0));
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Transform.scale(
@@ -673,8 +705,10 @@ RESPONSE GUIDELINES:
                   ),
                   filled: true,
                   fillColor: const Color(0xFFF1F3F6),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -701,8 +735,11 @@ RESPONSE GUIDELINES:
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.arrow_upward_rounded,
-                        color: Colors.white, size: 22),
+                    : const Icon(
+                        Icons.arrow_upward_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
               ),
             ),
           ],

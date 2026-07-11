@@ -56,6 +56,7 @@ Future<void> main() async {
     url: 'https://hxkokgzbeqmfdkzzeuex.supabase.co',
     anonKey: 'sb_publishable_lpOKSL2cJyyFuDMAXEOH0w_Q5jlrP7y',
   );
+  
 
   runApp(const EstateXApp());
 }
