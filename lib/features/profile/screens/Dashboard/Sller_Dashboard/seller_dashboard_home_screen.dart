@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../Hooks/Header.dart';
 import '../Hooks/dashboard_cards.dart';
-import '../../../../../services/supabase_service.dart';   // ← যোগ করুন
+import '../../../../../services/supabase_service.dart';
 
 class SellerDashboardHomeScreen extends StatefulWidget {
   const SellerDashboardHomeScreen({super.key});
@@ -27,6 +27,7 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
     super.initState();
     _loadDashboardData();
   }
+
   Future<void> _loadDashboardData() async {
     setState(() => _isLoading = true);
     try {
@@ -55,69 +56,89 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadDashboardData,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ==================== HEADER ====================
-                DashboardHeader(
-                  key: UniqueKey(),
-                  title: 'Seller Dashboard',
-                  role: 'Seller',
-                  profileRoute: '/seller-profile',
-                ),
-                const SizedBox(height: 24),
+      // ওপরে ফাঁকা অংশ দূর করতে এবং ফুল-উইডথ হেডারের জন্য মূল বডি থেকে SafeArea সরানো হয়েছে
+      body: RefreshIndicator(
+        onRefresh: _loadDashboardData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ==================== HEADER ====================
+              // হেডার এখন ডানে-বামে এবং ওপরে একদম ফুল স্ক্রিন কভার করবে
+              DashboardHeader(
+                key: UniqueKey(),
+                title: 'Seller Dashboard',
+                role: 'Seller',
+                profileRoute: '/seller-profile',
+              ),
 
-                // ==================== QUICK ACTIONS ====================
-                const Text(
-                  "Quick Actions",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                const DashboardQuickActions(),
-                const SizedBox(height: 28),
-
-                // ==================== STATISTICS GRID ====================
-                if (_isLoading)
-                  const Center(child: CircularProgressIndicator())
-                else
-                  DashboardStatsGrid(
-                    totalProperties: totalProperties,
-                    activeListings: activeListings,
-                    totalBids: totalBids,
-                    totalFavorites: totalInterested,
-                    totalBookingRequests: 0, // পরে যোগ করবেন
-                  ),
-
-                const SizedBox(height: 28),
-
-                // ==================== RECENT PROPERTIES ====================
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // ==================== CONTENT BODY ====================
+              // বাকি কনটেন্টগুলোকে আলাদা রেসপনসিভ প্যাডিং দেওয়া হলো
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ==================== QUICK ACTIONS ====================
                     const Text(
-                      "Recent Properties",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      "Quick Actions",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/my-properties'),
-                      child: const Text("View All"),
+                    const SizedBox(height: 12),
+                    const DashboardQuickActions(),
+                    const SizedBox(height: 28),
+
+                    // ==================== STATISTICS GRID ====================
+                    const Text(
+                      "Overview Statistics",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
                     ),
+                    const SizedBox(height: 12),
+                    if (_isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else
+                      DashboardStatsGrid(
+                        totalProperties: totalProperties,
+                        activeListings: activeListings,
+                        totalBids: totalBids,
+                        totalFavorites: totalInterested,
+                        totalBookingRequests: 0,
+                      ),
+
+                    const SizedBox(height: 28),
+
+                    // ==================== RECENT PROPERTIES ====================
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Recent Properties",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pushNamed(context, '/my-properties'),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          ),
+                          child: const Text("View All"),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _buildRecentProperties(),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _buildRecentProperties(),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -126,40 +147,69 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
 
   // ==================== RECENT PROPERTIES WIDGET ====================
   Widget _buildRecentProperties() {
-    // এখনো স্ট্যাটিক রাখা হয়েছে। পরে Supabase থেকে আনতে পারবেন
     return Column(
       children: List.generate(3, (index) {
         return Card(
           margin: const EdgeInsets.only(bottom: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          elevation: 3,
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(14),
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.network(
-                "https://picsum.photos/id/${100 + index}/200",
-                width: 78,
-                height: 78,
-                fit: BoxFit.cover,
-              ),
-            ),
-            title: const Text(
-              "Luxury 3 Bedroom Apartment",
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Gulshan, Dhaka"),
-                Text(
-                  "৳ 1,25,00,000 • Active",
-                  style: TextStyle(color: Colors.green),
+          elevation: 2,
+          color: Colors.white,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double width = constraints.maxWidth;
+              // অতি ক্ষুদ্র স্ক্রিনে যাতে কনটেন্ট ওভারফ্লো না করে সে জন্য ডাইনামিক ডিজাইন করা হয়েছে
+              final bool isUltraSmall = width < 330;
+
+              return ListTile(
+                contentPadding: EdgeInsets.all(isUltraSmall ? 10 : 14),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    "https://picsum.photos/id/${100 + index}/200",
+                    width: isUltraSmall ? 64 : 74,
+                    height: isUltraSmall ? 64 : 74,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-              ],
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 20),
-            onTap: () {},
+                title: Text(
+                  "Luxury 3 Bedroom Apartment",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: isUltraSmall ? 14 : 15,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 2),
+                    Text(
+                      "Gulshan, Dhaka",
+                      style: TextStyle(fontSize: isUltraSmall ? 11 : 13),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        "৳ 1,25,00,000 • Active",
+                        style: TextStyle(
+                          color: Colors.green, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: isUltraSmall ? 11 : 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                trailing: Icon(
+                  Icons.arrow_forward_ios, 
+                  size: isUltraSmall ? 16 : 18, 
+                  color: Colors.black45,
+                ),
+                onTap: () {},
+              );
+            },
           ),
         );
       }),

@@ -25,6 +25,7 @@ import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminBookingRequestsS
 import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManageBidsScreen/AdminManageBidsScreen.dart';
 import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManageUsersScreen/AdminManageUsersScreen.dart';
 import 'features/profile/screens/Dashboard/Admin_Dashboard/AdminManagePropertiesScreen/AdminManagePropertiesScreen.dart';
+import 'features/profile/screens/Dashboard/Hooks/Meeting_request.dart';
 
 // post bids
 import 'features/profile/screens/Dashboard/Sller_Dashboard/Bids_properties/Bids_post.dart';
@@ -116,6 +117,7 @@ class EstateXApp extends StatelessWidget {
         '/admin-profile': (context) => const AdminProfileScreen(),
         '/banned-profile': (context) => const BannedAccountScreen(),
         '/chatbot': (context) => const ChatbotScreen(),
+        '/buyer-meeting-requests': (context) => const MeetingRequestsPage(userRole: 'buyer'),
       },
     );
   }

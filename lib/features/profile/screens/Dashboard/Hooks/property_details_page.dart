@@ -14,12 +14,17 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   int _currentIndex = 0;
   bool _isRequesting = false;
   bool _hasRequestedBooking = false;
-  String? _currentBookingId; // Cancellation track korar id mapping pointer
+  String? _currentBookingId;
+
+  // Favorite States
+  bool _isFavorited = false;
+  bool _isFavoriteLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadBookingStatus();
+    _checkIfFavorite();
   }
 
   String? _getPropertyId() {
@@ -30,21 +35,80 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     return widget.property['seller_id']?.toString();
   }
 
+  // ==================== Favorite Logic ====================
+  Future<void> _checkIfFavorite() async {
+    if (_supabaseService.currentUser == null) return;
+
+    final propertyId = _getPropertyId();
+    if (propertyId == null) return;
+
+    final isFav = await _supabaseService.isFavorite(propertyId);
+    if (mounted) {
+      setState(() => _isFavorited = isFav);
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_supabaseService.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please login to add favorite"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isFavoriteLoading = true);
+
+    try {
+      final propertyId = _getPropertyId();
+      if (propertyId == null) return;
+
+      bool success;
+      if (_isFavorited) {
+        success = await _supabaseService.removeFromFavorite(propertyId);
+      } else {
+        success = await _supabaseService.addToFavorite(propertyId);
+      }
+
+      if (success && mounted) {
+        setState(() => _isFavorited = !_isFavorited);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isFavorited ? "Added to favorite ❤️" : "Removed from favorite",
+            ),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Favorite Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Something went wrong"), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isFavoriteLoading = false);
+    }
+  }
+
+  // ==================== Booking Logic (অপরিবর্তিত) ====================
   Future<void> _loadBookingStatus() async {
     final propertyId = _getPropertyId();
     if (propertyId == null || propertyId.isEmpty) return;
 
     final user = _supabaseService.currentUser;
-    if (user == null) return; // User unique check log parameters fallback template
+    if (user == null) return;
 
     try {
-      // Dynamic profile trace queries mapping framework checking parameters pipeline structure logic 
       final response = await _supabaseService.supabaseClient
           .from('booking_requests')
           .select('id, status')
           .eq('property_id', propertyId)
           .eq('buyer_id', user.id)
-          .neq('status', 'cancelled') // Cancelled status gulo consider hobe na active data validation trace e
+          .neq('status', 'cancelled')
           .maybeSingle();
 
       if (mounted && response != null) {
@@ -76,7 +140,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     if (propertyId == null || propertyId.isEmpty || sellerId == null || sellerId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Error: Operational metadata mapping profile details trace failed."),
+          content: Text("Error: Something went wrong"),
           backgroundColor: Colors.red,
         ),
       );
@@ -89,8 +153,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("Confirm Booking Request"),
         content: const Text(
-          "Do you want to send a booking request for this property?\n\n"
-          "The seller will contact you soon.",
+          "Do you want to send a booking request for this property?\n\nThe seller will contact you soon.",
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -118,7 +181,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
       );
       
       if (success && mounted) {
-        await _loadBookingStatus(); // Id pointer structural data state dynamically pulling tracking matrix
+        await _loadBookingStatus();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("✅ Booking Request Sent Successfully!"),
@@ -241,6 +304,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                           child: const Icon(Icons.image, size: 100),
                         ),
                 ),
+
                 if (images.length > 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -276,6 +340,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       ),
                     ),
                   ),
+
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
                   child: Column(
@@ -327,24 +392,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           if (_isResidential(propertyType))
-                            _buildFeature(
-                              Icons.king_bed,
-                              "${widget.property['bedrooms'] ?? 0} Bed",
-                            ),
+                            _buildFeature(Icons.king_bed, "${widget.property['bedrooms'] ?? 0} Bed"),
                           if (_isResidential(propertyType))
-                            _buildFeature(
-                              Icons.bathtub,
-                              "${widget.property['bathrooms'] ?? 0} Bath",
-                            ),
-                          _buildFeature(
-                            Icons.square_foot,
-                            "${widget.property['area'] ?? 'N/A'} Sqft",
-                          ),
+                            _buildFeature(Icons.bathtub, "${widget.property['bathrooms'] ?? 0} Bath"),
+                          _buildFeature(Icons.square_foot, "${widget.property['area'] ?? 'N/A'} Sqft"),
                           if (_isLand(propertyType))
-                            _buildFeature(
-                              Icons.landscape,
-                              "${widget.property['plot_area'] ?? widget.property['area'] ?? 'N/A'} Sqft",
-                            ),
+                            _buildFeature(Icons.landscape, "${widget.property['plot_area'] ?? widget.property['area'] ?? 'N/A'} Sqft"),
                         ],
                       ),
                       const SizedBox(height: 35),
@@ -363,6 +416,65 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
               ],
             ),
           ),
+
+          // Top Right: Favorite + Share
+          Positioned(
+            top: 50,
+            right: 20,
+            child: Row(
+              children: [
+                // Favorite Button
+                GestureDetector(
+                  onTap: _isFavoriteLoading ? null : _toggleFavorite,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 22,
+                    child: _isFavoriteLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          )
+                        : Icon(
+                            _isFavorited ? Icons.favorite : Icons.favorite_border,
+                            color: _isFavorited ? Colors.red : Colors.black87,
+                            size: 24,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Share Button
+                CircleAvatar(
+                  backgroundColor: Colors.white,
+                  radius: 22,
+                  child: IconButton(
+                    icon: const Icon(Icons.share, color: Colors.black87),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Share feature coming soon")),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Back Button (আসল জায়গায়)
+          Positioned(
+            top: 50,
+            left: 20,
+            child: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
+
+          // Bottom Booking Button
           Positioned(
             bottom: 20,
             left: 20,
@@ -388,17 +500,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       _hasRequestedBooking ? "Cancel the Booking" : "Request for Booking",
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-            ),
-          ),
-          Positioned(
-            top: 50,
-            left: 20,
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black),
-                onPressed: () => Navigator.pop(context),
-              ),
             ),
           ),
         ],

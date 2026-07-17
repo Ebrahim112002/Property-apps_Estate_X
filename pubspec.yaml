@@ -42,9 +42,6 @@ dependencies:
   # --- Notifications ---
   flutter_local_notifications: ^17.0.0 # বিড আপডেট বা নতুন প্রপার্টির নোটিফিকেশনের জন্য
 
-  # --- Payment (প্রিমিয়াম ফিচারের জন্য) ---
-  flutter_stripe: ^10.1.1  
-      # পেমেন্ট গেটওয়ে ইন্টিগ্রেশনের জন্য (যদি প্রয়োজন হয়)
   image_picker: ^1.1.2
   permission_handler: ^11.3.1
 dev_dependencies:

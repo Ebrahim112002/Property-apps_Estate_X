@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../services/supabase_service.dart';
-import '../Hooks/Header.dart'; // Assuming same location as Buyer
+import '../Hooks/Header.dart';
 
 class AdminDashboardHomeScreen extends StatefulWidget {
   const AdminDashboardHomeScreen({super.key});
@@ -31,7 +31,6 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Fetch real stats from Supabase
       final usersResponse = await _supabaseService.supabaseClient
           .from('profiles')
           .select('id')
@@ -67,7 +66,6 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
       });
     } catch (e) {
       debugPrint('Error loading admin dashboard data: $e');
-      // Fallback values
       setState(() {
         totalUsers = 142;
         totalProperties = 89;
@@ -84,94 +82,113 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F9),
+      // ওপরে ফাঁকা জায়গা পুরোপুরি দূর করতে SafeArea বাদ দেওয়া হয়েছে, কারণ Header-এর ভেতরে নিজস্ব SafeArea অলরেডি আছে।
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Reuse the same beautiful Header
-                    DashboardHeader(
-                      key: UniqueKey(),
-                      title: "Admin Dashboard",
-                      role: "Admin",
-                      profileRoute: '/admin-profile',
+          : SingleChildScrollView(
+              // পুরো স্ক্রিনের প্যাডিং তুলে দেওয়া হয়েছে যাতে হেডার ফুল উইডথ পায়
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // হেডার এখন ডানে, বামে এবং ওপরে একদম শেষ প্রান্ত পর্যন্ত জায়গা ফিলআপ করবে
+                  DashboardHeader(
+                    key: UniqueKey(),
+                    title: "Admin Dashboard",
+                    role: "Admin",
+                    profileRoute: '/admin-profile',
+                  ),
+                  
+                  // নিচের কন্টেন্টগুলোর জন্য আলাদা করে ২০ পিক্সেল প্যাডিং দেওয়া হয়েছে
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        const Text(
+                          "Platform Overview",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Stats Grid
+                        _buildStatsGrid(),
+                        const SizedBox(height: 24),
+
+                        // Quick Actions Section
+                        const Text(
+                          "Quick Management",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        _buildQuickActionCards(context),
+                      ],
                     ),
-                    const SizedBox(height: 24),
-
-                    const Text(
-                      "Platform Overview",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Stats Grid
-                    _buildStatsGrid(),
-                    const SizedBox(height: 24),
-
-                    // Quick Actions Section
-                    const Text(
-                      "Quick Management",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildQuickActionCards(context),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
     );
   }
 
   Widget _buildStatsGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 14,
-      mainAxisSpacing: 14,
-      childAspectRatio: 1.65,
-      children: [
-        _buildStatCard(
-          "Total Users",
-          totalUsers.toString(),
-          Icons.people_alt,
-          Colors.indigo,
-          onTap: () => Navigator.pushNamed(context, '/admin-manage-users'),
-        ),
-        _buildStatCard(
-          "All Properties",
-          totalProperties.toString(),
-          Icons.home_work,
-          Colors.purple,
-          onTap: () => Navigator.pushNamed(context, '/admin-manage-properties'),
-        ),
-        _buildStatCard(
-          "Bid Properties",
-          totalBidProperties.toString(),
-          Icons.gavel,
-          Colors.orange,
-          onTap: () => Navigator.pushNamed(context, '/admin-manage-bids'),
-        ),
-        _buildStatCard(
-          "Bookings",
-          totalBookingRequests.toString(),
-          Icons.request_page_outlined,
-          Colors.teal,
-          onTap: () => Navigator.pushNamed(context, '/admin-booking-requests'),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double width = constraints.maxWidth;
+        final double aspectRatio = width < 360
+            ? 1.35
+            : width < 400
+                ? 1.5
+                : 1.65;
+
+        return GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
+          childAspectRatio: aspectRatio,
+          children: [
+            _buildStatCard(
+              "Total Users",
+              totalUsers.toString(),
+              Icons.people_alt,
+              Colors.indigo,
+              onTap: () => Navigator.pushNamed(context, '/admin-manage-users'),
+            ),
+            _buildStatCard(
+              "All Properties",
+              totalProperties.toString(),
+              Icons.home_work,
+              Colors.purple,
+              onTap: () => Navigator.pushNamed(context, '/admin-manage-properties'),
+            ),
+            _buildStatCard(
+              "Bid Properties",
+              totalBidProperties.toString(),
+              Icons.gavel,
+              Colors.orange,
+              onTap: () => Navigator.pushNamed(context, '/admin-manage-bids'),
+            ),
+            _buildStatCard(
+              "Bookings",
+              totalBookingRequests.toString(),
+              Icons.request_page_outlined,
+              Colors.teal,
+              onTap: () => Navigator.pushNamed(context, '/admin-booking-requests'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -185,7 +202,6 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -197,28 +213,51 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 30),
-            const Spacer(),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 13.5, color: Colors.grey[700]),
-            ),
-            const Text(
-              "Tap to manage",
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.teal,
-                fontWeight: FontWeight.w500,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double cardWidth = constraints.maxWidth;
+            final bool isSmallScreen = cardWidth < 170;
+            final double pad = isSmallScreen ? 14 : 18;
+
+            return Padding(
+              padding: EdgeInsets.all(pad),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topLeft,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: cardWidth - pad * 2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, color: color, size: isSmallScreen ? 26 : 30),
+                      SizedBox(height: isSmallScreen ? 8 : 12),
+                      Text(
+                        value,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 22 : 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        title,
+                        style: TextStyle(fontSize: 13.5, color: Colors.grey[700]),
+                      ),
+                      const Text(
+                        "Tap to manage",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.teal,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

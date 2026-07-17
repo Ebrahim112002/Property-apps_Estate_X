@@ -1189,4 +1189,89 @@ class SupabaseService {
       return false;
     }
   }
+
+   // ─────────────────────────────────────────
+  // PROPERTY MEETINGS METHODS
+  // ─────────────────────────────────────────
+
+  /// ১. মিটিং রিকোয়েস্ট তৈরি করা
+  Future<bool> createMeetingRequest({
+    required String propertyId,
+    required String sellerId,
+    required String fullName,
+    required String email,
+    required String phone,
+    required String date,
+    required String time,
+  }) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      await _supabase.from('property_meetings').insert({
+        'property_id': propertyId,
+        'buyer_id': user.id,
+        'seller_id': sellerId,
+        'full_name': fullName,
+        'email': email,
+        'phone_number': phone,
+        'meeting_date': date,
+        'meeting_time': time,
+        'status': 'pending',
+      });
+      return true;
+    } catch (e) {
+      debugPrint('❌ Create Meeting Request Error: $e');
+      return false;
+    }
+  }
+
+  /// ২. রোল ভিত্তিক মিটিং রিকোয়েস্ট ফেচ করা (আপডেটেড)
+  Future<List<Map<String, dynamic>>> fetchMeetingRequests(String role) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return [];
+
+      var query = _supabase.from('property_meetings').select('''
+        *,
+        properties(id, title, location, price, image_urls),
+        buyer_profile:profiles!buyer_id(full_name, email),
+        seller_profile:profiles!seller_id(full_name)
+      ''');
+
+      if (role == 'admin') {
+        // Admin সব দেখবে
+      } else if (role == 'seller') {
+        query = query.eq('seller_id', user.id);
+      } else if (role == 'buyer') {
+        query = query.eq('buyer_id', user.id);
+      }
+
+      final response = await query.order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('❌ Fetch Meetings Error: $e');
+      return [];
+    }
+  }
+
+  /// ৩. মিটিং স্ট্যাটাস আপডেট করা
+  Future<bool> updateMeetingStatusOrData({
+    required String meetingId,
+    required Map<String, dynamic> updateData,
+  }) async {
+    try {
+      await _supabase
+          .from('property_meetings')
+          .update({
+            ...updateData,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', meetingId);
+      return true;
+    } catch (e) {
+      debugPrint('❌ Update Meeting Error: $e');
+      return false;
+    }
+  }
 }
