@@ -118,6 +118,7 @@ class EstateXApp extends StatelessWidget {
         '/banned-profile': (context) => const BannedAccountScreen(),
         '/chatbot': (context) => const ChatbotScreen(),
         '/buyer-meeting-requests': (context) => const MeetingRequestsPage(userRole: 'buyer'),
+        '/admin-meeting-requests': (context) => const MeetingRequestsPage(userRole: 'admin'),
       },
     );
   }

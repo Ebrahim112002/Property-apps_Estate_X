@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../../services/supabase_service.dart';
 import '../Hooks/Header.dart';
+import '../Hooks/Meeting_request.dart';   // ← এই ইম্পোর্টটা ঠিক রাখো
 
 class AdminDashboardHomeScreen extends StatefulWidget {
   const AdminDashboardHomeScreen({super.key});
@@ -17,6 +18,7 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
   int totalProperties = 0;
   int totalBidProperties = 0;
   int totalBookingRequests = 0;
+  int totalMeetingRequests = 0;   // নতুন
   int activeBids = 0;
 
   bool _isLoading = true;
@@ -51,6 +53,11 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
           .select('id')
           .count();
 
+      final meetingRequestsResponse = await _supabaseService.supabaseClient
+          .from('property_meetings')
+          .select('id')
+          .count();
+
       final activeBidsResponse = await _supabaseService.supabaseClient
           .from('bid_properties')
           .select('id')
@@ -62,15 +69,18 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
         totalProperties = propertiesResponse.count ?? 0;
         totalBidProperties = bidPropertiesResponse.count ?? 0;
         totalBookingRequests = bookingRequestsResponse.count ?? 0;
+        totalMeetingRequests = meetingRequestsResponse.count ?? 0;
         activeBids = activeBidsResponse.count ?? 0;
       });
     } catch (e) {
       debugPrint('Error loading admin dashboard data: $e');
+      // Fallback values
       setState(() {
         totalUsers = 142;
         totalProperties = 89;
         totalBidProperties = 34;
         totalBookingRequests = 27;
+        totalMeetingRequests = 15;
         activeBids = 18;
       });
     } finally {
@@ -82,15 +92,12 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F9),
-      // ওপরে ফাঁকা জায়গা পুরোপুরি দূর করতে SafeArea বাদ দেওয়া হয়েছে, কারণ Header-এর ভেতরে নিজস্ব SafeArea অলরেডি আছে।
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              // পুরো স্ক্রিনের প্যাডিং তুলে দেওয়া হয়েছে যাতে হেডার ফুল উইডথ পায়
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // হেডার এখন ডানে, বামে এবং ওপরে একদম শেষ প্রান্ত পর্যন্ত জায়গা ফিলআপ করবে
                   DashboardHeader(
                     key: UniqueKey(),
                     title: "Admin Dashboard",
@@ -98,7 +105,6 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
                     profileRoute: '/admin-profile',
                   ),
                   
-                  // নিচের কন্টেন্টগুলোর জন্য আলাদা করে ২০ পিক্সেল প্যাডিং দেওয়া হয়েছে
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     child: Column(
@@ -115,11 +121,9 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Stats Grid
                         _buildStatsGrid(),
                         const SizedBox(height: 24),
 
-                        // Quick Actions Section
                         const Text(
                           "Quick Management",
                           style: TextStyle(
@@ -144,11 +148,7 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
-        final double aspectRatio = width < 360
-            ? 1.35
-            : width < 400
-                ? 1.5
-                : 1.65;
+        final double aspectRatio = width < 360 ? 1.35 : width < 400 ? 1.5 : 1.65;
 
         return GridView.count(
           crossAxisCount: 2,
@@ -185,6 +185,18 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
               Icons.request_page_outlined,
               Colors.teal,
               onTap: () => Navigator.pushNamed(context, '/admin-booking-requests'),
+            ),
+            _buildStatCard(
+              "Meeting Requests",
+              totalMeetingRequests.toString(),
+              Icons.calendar_today_rounded,
+              Colors.deepPurple,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MeetingRequestsPage(userRole: 'admin'),
+                ),
+              ),
             ),
           ],
         );
@@ -279,11 +291,7 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.25),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
+                BoxShadow(color: Colors.blue.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4)),
               ],
             ),
             child: const Row(
@@ -294,18 +302,8 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Manage Users",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        "Ban / Role Change / View All",
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
+                      Text("Manage Users", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text("Ban / Role Change / View All", style: TextStyle(color: Colors.white70, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -315,6 +313,44 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
           ),
         ),
         const SizedBox(height: 12),
+
+        // Meeting Requests Quick Action
+        GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MeetingRequestsPage(userRole: 'admin')),
+          ),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.calendar_today_rounded, color: Colors.white, size: 32),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Meeting Requests", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text("Review all property meetings", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios, color: Colors.white70),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/admin-manage-properties'),
           child: Container(
@@ -336,60 +372,8 @@ class _AdminDashboardHomeScreenState extends State<AdminDashboardHomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Manage Properties",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        "CRUD + Verify Listings",
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.arrow_forward_ios, color: Colors.white70),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/admin-manage-bids'),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFf59e0b), Color(0xFFd97706)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.gavel_rounded, color: Colors.white, size: 32),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Manage Auctions",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        "Monitor Active Bids",
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
+                      Text("Manage Properties", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text("CRUD + Verify Listings", style: TextStyle(color: Colors.white70, fontSize: 13)),
                     ],
                   ),
                 ),

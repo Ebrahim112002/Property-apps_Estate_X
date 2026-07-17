@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../Hooks/Header.dart';
 import '../Hooks/dashboard_cards.dart';
 import '../../../../../services/supabase_service.dart';
+import '../Hooks/Meeting_request.dart';   // ← এই লাইনটা যোগ করো
 
 class SellerDashboardHomeScreen extends StatefulWidget {
   const SellerDashboardHomeScreen({super.key});
@@ -18,7 +19,8 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
   int totalProperties = 0;
   int activeListings = 0;
   int totalBids = 0;
-  int totalInterested = 0;   // Favorites / Interested
+  int totalInterested = 0;
+  int totalMeetingRequests = 0;   // ← নতুন
 
   bool _isLoading = true;
 
@@ -33,13 +35,13 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
     try {
       final myProperties = await _supabaseService.fetchMyBidProperties();
 
+      // Meeting Requests Count
+      final meetings = await _supabaseService.fetchMeetingRequests('seller');
+
       setState(() {
         totalProperties = myProperties.length;
-
-        // Active Listings
         activeListings = myProperties.where((p) => p['is_active'] == true).length;
 
-        // ✅ Fixed: Total Bids - Safe way
         totalBids = myProperties.fold<int>(0, (sum, p) {
           final bidCount = p['bid_count'];
           if (bidCount is int) return sum + bidCount;
@@ -47,8 +49,7 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
           return sum;
         });
 
-        // totalInterested পরে যোগ করবেন
-        // totalInterested = ... 
+        totalMeetingRequests = meetings.length;
       });
     } catch (e) {
       debugPrint('Dashboard data load error: $e');
@@ -61,7 +62,6 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // ওপরে ফাঁকা অংশ দূর করতে এবং ফুল-উইডথ হেডারের জন্য মূল বডি থেকে SafeArea সরানো হয়েছে
       body: RefreshIndicator(
         onRefresh: _loadDashboardData,
         child: SingleChildScrollView(
@@ -69,8 +69,6 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ==================== HEADER ====================
-              // হেডার এখন ডানে-বামে এবং ওপরে একদম ফুল স্ক্রিন কভার করবে
               DashboardHeader(
                 key: UniqueKey(),
                 title: 'Seller Dashboard',
@@ -78,14 +76,11 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                 profileRoute: '/seller-profile',
               ),
 
-              // ==================== CONTENT BODY ====================
-              // বাকি কনটেন্টগুলোকে আলাদা রেসপনসিভ প্যাডিং দেওয়া হলো
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ==================== QUICK ACTIONS ====================
                     const Text(
                       "Quick Actions",
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
@@ -94,12 +89,12 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                     const DashboardQuickActions(),
                     const SizedBox(height: 28),
 
-                    // ==================== STATISTICS GRID ====================
                     const Text(
                       "Overview Statistics",
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
                     ),
                     const SizedBox(height: 12),
+
                     if (_isLoading)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
@@ -112,11 +107,11 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                         totalBids: totalBids,
                         totalFavorites: totalInterested,
                         totalBookingRequests: 0,
+                        totalMeetingRequests: totalMeetingRequests,   // ← নতুন প্যারামিটার
                       ),
 
                     const SizedBox(height: 28),
 
-                    // ==================== RECENT PROPERTIES ====================
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -126,9 +121,6 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                         ),
                         TextButton(
                           onPressed: () => Navigator.pushNamed(context, '/my-properties'),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          ),
                           child: const Text("View All"),
                         ),
                       ],
@@ -145,7 +137,6 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
     );
   }
 
-  // ==================== RECENT PROPERTIES WIDGET ====================
   Widget _buildRecentProperties() {
     return Column(
       children: List.generate(3, (index) {
@@ -157,7 +148,6 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final double width = constraints.maxWidth;
-              // অতি ক্ষুদ্র স্ক্রিনে যাতে কনটেন্ট ওভারফ্লো না করে সে জন্য ডাইনামিক ডিজাইন করা হয়েছে
               final bool isUltraSmall = width < 330;
 
               return ListTile(
@@ -175,38 +165,24 @@ class _SellerDashboardHomeScreenState extends State<SellerDashboardHomeScreen> {
                   "Luxury 3 Bedroom Apartment",
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: isUltraSmall ? 14 : 15,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: isUltraSmall ? 14 : 15),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 2),
-                    Text(
-                      "Gulshan, Dhaka",
-                      style: TextStyle(fontSize: isUltraSmall ? 11 : 13),
-                    ),
+                    Text("Gulshan, Dhaka", style: TextStyle(fontSize: isUltraSmall ? 11 : 13)),
                     const SizedBox(height: 2),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
                         "৳ 1,25,00,000 • Active",
-                        style: TextStyle(
-                          color: Colors.green, 
-                          fontWeight: FontWeight.bold,
-                          fontSize: isUltraSmall ? 11 : 13,
-                        ),
+                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: isUltraSmall ? 11 : 13),
                       ),
                     ),
                   ],
                 ),
-                trailing: Icon(
-                  Icons.arrow_forward_ios, 
-                  size: isUltraSmall ? 16 : 18, 
-                  color: Colors.black45,
-                ),
+                trailing: Icon(Icons.arrow_forward_ios, size: isUltraSmall ? 16 : 18, color: Colors.black45),
                 onTap: () {},
               );
             },

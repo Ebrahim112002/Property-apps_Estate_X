@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import '../Hooks/Meeting_request.dart';   // ← এই ইম্পোর্টটা খুব জরুরি
 
 // ==================== RESPONSIVE HELPERS ====================
-// One place that decides sizing/aspect-ratio for every breakpoint,
-// so both grids stay in sync and nothing gets clipped on narrow phones.
 class _GridSizing {
   final double aspectRatio;
   final double iconSize;
@@ -24,8 +23,6 @@ class _GridSizing {
     required this.spacing,
   });
 
-  // width = the actual width the grid gets (from LayoutBuilder),
-  // not just MediaQuery, so it's correct even inside padded parents.
   factory _GridSizing.of(double width, {required bool tallCard}) {
     if (width < 320) {
       return _GridSizing(
@@ -128,7 +125,6 @@ class DashboardQuickActions extends StatelessWidget {
               children: actionButtons,
             ),
             SizedBox(height: sizing.spacing + 2),
-            // My Bids History Banner
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/my-bids-history'),
               child: Container(
@@ -193,8 +189,6 @@ class DashboardQuickActions extends StatelessWidget {
             BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
-        // mainAxisSize.min + Flexible label = content never demands more
-        // height than the cell actually has, so it can't overflow.
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
@@ -229,6 +223,7 @@ class DashboardStatsGrid extends StatelessWidget {
   final int totalBids;
   final int totalFavorites;
   final int totalBookingRequests;
+  final int totalMeetingRequests;   // ← নতুন
 
   const DashboardStatsGrid({
     super.key,
@@ -237,6 +232,7 @@ class DashboardStatsGrid extends StatelessWidget {
     required this.totalBids,
     required this.totalFavorites,
     required this.totalBookingRequests,
+    required this.totalMeetingRequests,
   });
 
   @override
@@ -244,8 +240,6 @@ class DashboardStatsGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
-        // tallCard: true because one card has an extra "Tap to view" line —
-        // sizing accounts for the tallest possible card content up front.
         final sizing = _GridSizing.of(width, tallCard: true);
 
         return GridView.count(
@@ -261,6 +255,19 @@ class DashboardStatsGrid extends StatelessWidget {
             _buildStatCard(sizing, "Total Bids", totalBids.toString(), Icons.gavel_rounded, Colors.orange, onTap: () => Navigator.pushNamed(context, '/seller-bid-history')),
             _buildStatCard(sizing, "Favorites", totalFavorites.toString(), Icons.favorite, Colors.purple, onTap: () => Navigator.pushNamed(context, '/favorites')),
             _buildStatCard(sizing, "Booking Requests", totalBookingRequests.toString(), Icons.request_page_outlined, Colors.teal, onTap: () => Navigator.pushNamed(context, '/buyer-booking-requests')),
+            
+            // Meeting Requests Card (Seller)
+            _buildStatCard(
+              sizing, 
+              "Meeting Requests", 
+              totalMeetingRequests.toString(), 
+              Icons.calendar_today_rounded, 
+              Colors.deepPurple, 
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MeetingRequestsPage(userRole: 'seller')),
+              ),
+            ),
           ],
         );
       },
@@ -286,17 +293,12 @@ class DashboardStatsGrid extends StatelessWidget {
             BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 5)),
           ],
         ),
-        // No more Spacer() forcing a fixed gap — mainAxisSize.min lets the
-        // column size to its content, and the aspect ratio above already
-        // guarantees enough height, so nothing gets pushed past the card.
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: color, size: sizing.iconSize),
             SizedBox(height: sizing.paddingV * 0.5),
-            // FittedBox = a safety net so a big number (e.g. "12,345")
-            // shrinks to fit instead of overflowing on very narrow cards.
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -312,7 +314,7 @@ class DashboardStatsGrid extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: sizing.titleFontSize, color: Colors.grey[700], height: 1.1),
             ),
-            if (title == "Booking Requests")
+            if (title == "Booking Requests" || title == "Meeting Requests")
               Text(
                 "Tap to view",
                 style: TextStyle(fontSize: sizing.smallFontSize, color: Colors.teal, fontWeight: FontWeight.w500),
